@@ -1,0 +1,17 @@
+#/bin/bash
+
+# obtain scan and session labels
+scans=/data/jux/mackey_group/public_data/ABCD/release2_site14site16_dicoms/*
+SCRIPTS_DIR=/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/code/ppc
+#for a custom set of subjects
+declare -a arr=(NDARINVAU2AGPUR NDARINVC0W9C4R6 NDARINVM7FJXJRR NDARINVNER12NXX NDARINVNJRMP62L NDARINVPR3T5MAK NDARINVV4KUL4N2 NDARINVDMMAKV5Y NDARINVV7NEVHLK NDARINVZLP46GRP)
+
+#for sc in $scans; #if running everyone in the folder
+for subID in "${arr[@]}";
+	#do subID=$(echo $sc|cut -d'/' -f8 |cut -c 5-); 	#if running everyone in the folder
+	do echo ${subID}
+  qsub ${SCRIPTS_DIR}/heudiconv_cmd.sh ${subID}
+
+done
+
+#singularity run -B /data/jux/mackey_group/public_data/ABCD/release2_site20:/mnt --cleanenv /data/picsl/mackey_group/tools/singularity/heudiconv0.5.4.simg -d /mnt/sub-{subject}/*/*/*/sub-{subject}*.dcm -o /mnt/niftis -f convertall -s NDARINVMDWZP1FT -c none -b;

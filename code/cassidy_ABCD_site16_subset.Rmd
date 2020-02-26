@@ -1,0 +1,321 @@
+---
+title: "Pulling Subjects from ABCD Release 2 Site 16 for Cassidy CVM Analyses"
+output: html_notebook
+---
+Just load the text files, because the .Rds file is too huge for Release 2.0 and my computer.
+
+Cassidy, there may be some subjects in this list who are not there if their conversion failed--let me know if that's a big issue and I'll look into it. I just realized looking back at my scripts that the folders were named wrong--the big site is site 16, the two smaller sites are sites 14 and 20. 
+
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(summarytools)
+library(PerformanceAnalytics)
+library(stringr)
+library(car)
+data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2/'
+output_data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2_fixed/'
+subjlist_dir='/Users/utooley/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/'
+sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"))# change strings as factors = FALSE next time
+sites = sites[-1,]
+sites = droplevels(sites)
+sites <- select(sites, -c(collection_id:dataset_id))
+sites$subjectid <- sites$subjectkey
+socio <- read.delim(paste0(data_dir,"acspsw03.txt"))
+socio = socio[-1,]
+socio = droplevels(socio)
+socio <- select(socio, -c(collection_id:dataset_id)) 
+socio$subjectid <- socio$subjectkey
+# income <- read.delim(paste0(data_dir,"abcd_lpds01.txt")) #this was accidentally the longitudinal demographics survey, use the general one instead
+# income = income[-1,]
+# income = droplevels(income)
+# income <- select(income, -c(collection_id:dataset_id))
+# income$subjectid <- income$subjectkey
+income <- read.delim(paste0(data_dir,"pdem02.txt")) 
+income = income[-1,]
+income = droplevels(income)
+income <- select(income, -c(collection_id:dataset_id))
+income$subjectid <- income$subjectkey
+yksads <- read.delim(paste0(data_dir,"abcd_ptsd01.txt"))
+yksads = yksads[-1,]
+yksads = droplevels(yksads)
+yksads <- select(yksads, -c(collection_id:dataset_id))
+yksads$subjectid <- yksads$subjectkey
+#get hormones
+hormoneqs <- read.delim(paste0(data_dir,"sph01.txt"))
+hormoneqs = hormoneqs[-1,]
+hormoneqs = droplevels(hormoneqs)
+hormoneqs <- select(hormoneqs, -c(collection_id:dataset_id))
+hormoneqs$subjectid <- hormoneqs$subjectkey
+hormoneqs$eventname <- hormoneqs$visit
+hormonedhea <- read.delim(paste0(data_dir,"abcd_hsss01.txt"))
+hormonedhea = hormonedhea[-1,]
+hormonedhea = droplevels(hormonedhea)
+hormonedhea <- select(hormonedhea, -c(collection_id:dataset_id))
+hormonedhea$subjectid <- hormonedhea$subjectkey
+main<- left_join(sites,socio, by=c("subjectid", "eventname"))
+main <- left_join(main, income, by=c("subjectid", "eventname"))
+main <- left_join(main, yksads, by=c("subjectid", "eventname"))
+main <- left_join(main, hormoneqs, by=c("subjectid", "eventname"))
+main <- left_join(main, hormonedhea, by=c("subjectid", "eventname"))
+```
+
+```{r site selection}
+main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site16") #filter out only the baseline visits
+#for site 16
+subjlist1 <- read.table(paste0(subjlist_dir, "/n698_release2_site16_0.2mm_bids.txt"), col.names = c("subjectid"))
+#for site 20 and 14
+#subjlist2 <- read.table(paste0(subjlist_dir, "site14site20/n611_release2_site14site20_0.2mm.txt"), col.names = c("subjectid"))
+#subjlist2$subjectid <- str_remove(subjlist2$subjectid, "sub-")
+#wholesubjectlist <- rbind(subjlist1, subjlist2)
+main$subjectid <- str_remove(main$subjectid, "_") #subjectid has a _ in it after NDAR in the NDAR data, doesn't match subject list
+main <- left_join(subjlist1, main, by="subjectid") #using site 16
+#recode income
+main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
+```
+
+## Selection of inital sample from Site 16
+
+```{r ksads, echo=FALSE}
+#colnames(yksads)
+temp <- select(main, ksads_ptsd_raw_754_p:ksads_ptsd_raw_770_p) 
+temp[] <- lapply(temp, function(x) as.numeric(as.character(x))) #turn to numeric
+main$ksads_ptsd_sum <- rowSums(temp) #don't remove NAs because they wil turn into 0's
+hist(main$ksads_ptsd_sum) #this is weird, there's several people with 1's in every column, see if this correlates with income or something? It doesn't--it's weird.
+table(main$ksads_ptsd_sum, main$race_ethnicity)
+subs_ptsd_overtwo_white <- main %>% filter(., ksads_ptsd_sum >=2 & ksads_ptsd_sum < 17) %>% filter(., race_ethnicity==1)
+subs_ptsd_zero_white <- main %>% filter(., ksads_ptsd_sum ==0) %>% filter(., race_ethnicity==1)
+summary(subs_ptsd_overtwo_white$race_ethnicity) #make sure they're white, there's 25
+summary(subs_ptsd_zero_white$race_ethnicity)
+
+```
+
+## Check sex and income
+```{r race groups}
+summary(as.numeric(as.character(subs_ptsd_overtwo_white$hormone_scr_dhea_mean))) #not everyone has hormone data
+summary(subs_ptsd_overtwo_white$demo_sex_v2) #16 males, 9 females
+summary(subs_ptsd_overtwo_white$demo_comb_income_numeric) #median income is 87500
+hist(subs_ptsd_overtwo_white$demo_comb_income_numeric)
+summary(subs_ptsd_zero_white$demo_comb_income_numeric) #in the whole site, mean income is higher
+
+#iterate this until income is higher than the other sample
+#males <- subs_ptsd_zero_white %>% filter(., demo_sex_v2==1) %>% sample_n(., 16) 
+#females <- subs_ptsd_zero_white %>% filter(., demo_sex_v2==2) %>% sample_n(., 9) 
+#subs_ptsd_zero_white_subset <- rbind(males,females)
+summary(subs_ptsd_zero_white_subset$demo_comb_income_numeric) #iterate this until income is higher than the other sample
+
+```
+
+## Take a final look at summaries
+```{r dataframe summaries}
+view(dfSummary(subs_ptsd_overtwo_white)) #eh this isn't that useful without real variable names and with everything as factors, could change strings as factors = FALSE next time
+view(dfSummary(subs_ptsd_zero_white_subset))
+```
+
+## Write out subject lists
+```{r write out subject lists}
+n50_site16_ksads_ptsd_filter <- rbind(subs_ptsd_zero_white_subset, subs_ptsd_overtwo_white)
+dim(n50_site16_ksads_ptsd_filter)
+#sort on some non-related randomvariable
+n50_site16_ksads_ptsd_filter <- arrange(n50_site16_ksads_ptsd_filter, as.numeric(as.character(demo_origin_v2)))
+#write them out, but only the ID
+write.csv(n50_site16_ksads_ptsd_filter$subjectid, paste0(subjlist_dir,"n50_site16_cassidy_ksads_filter.csv"))
+```
+
+# Merge in AWS addresses from Site16 subject list
+```{r Merge in image data to site16, echo=FALSE}
+data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2/'
+subjlist_dir='/Users/utooley/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/'
+output_subjlist_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/'
+subjlist <- read.csv(paste0(subjlist_dir,"n50_site16_cassidy_ksads_filter.csv"), col.names = c("num", "subjectid"))
+rawimages= read.delim(paste0(data_dir,"image03.txt"))
+rawimages = rawimages[-1,]
+rawimages = droplevels(rawimages)
+rawimages$subjectid <- rawimages$subjectkey
+rawimages$subjectid <- str_remove(rawimages$subjectid, "_") #subjectid has a _ in it after NDAR in the NDAR data, doesn't match subject list I generated
+```
+
+## Write out AWS addresses for T1s and T2s for subject lists already created
+```{r aws addresses for site16, echo=FALSE}
+image_files <- left_join(subjlist, rawimages, by="subjectid")
+image_files <- filter(image_files, visit=="baseline_year_1_arm_1")
+image_files_T2s_T1s <- filter(image_files, image_description %in% c("ABCD-T1", "ABCD-T1-NORM","ABCD-T2-NORM", "ABCD-T2"))
+AWS_site16_T2s_T1s_cassidy <- select(image_files_T2s_T1s, image_file)
+write.table(AWS_site16_T2s_T1s_cassidy$image_file, paste0(output_subjlist_dir, "AWS_cassidy_release2_site16_n50_T2s_T1s.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+
+```
+
+#STARTING OVER 
+## Since we're pulling from AWS anyways, let's find a good site to get a good sample!
+
+```{r start over setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(summarytools)
+library(PerformanceAnalytics)
+library(stringr)
+library(car)
+data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2/'
+output_data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2_fixed/'
+subjlist_dir='/Users/utooley/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/'
+sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"))# change strings as factors = FALSE next time
+sites = sites[-1,]
+sites = droplevels(sites)
+sites <- select(sites, -c(collection_id:dataset_id))
+sites$subjectid <- sites$subjectkey
+socio <- read.delim(paste0(data_dir,"acspsw03.txt"))
+socio = socio[-1,]
+socio = droplevels(socio)
+socio <- select(socio, -c(collection_id:dataset_id)) 
+socio$subjectid <- socio$subjectkey
+# income <- read.delim(paste0(data_dir,"abcd_lpds01.txt")) #this was accidentally the longitudinal demographics survey, use the general one instead
+# income = income[-1,]
+# income = droplevels(income)
+# income <- select(income, -c(collection_id:dataset_id))
+# income$subjectid <- income$subjectkey
+income <- read.delim(paste0(data_dir,"pdem02.txt")) 
+income = income[-1,]
+income = droplevels(income)
+income <- select(income, -c(collection_id:dataset_id))
+income$subjectid <- income$subjectkey
+yksads <- read.delim(paste0(data_dir,"abcd_ptsd01.txt"))
+yksads = yksads[-1,]
+yksads = droplevels(yksads)
+yksads <- select(yksads, -c(collection_id:dataset_id))
+yksads$subjectid <- yksads$subjectkey
+#get hormones
+hormoneqs <- read.delim(paste0(data_dir,"sph01.txt"))
+hormoneqs = hormoneqs[-1,]
+hormoneqs = droplevels(hormoneqs)
+hormoneqs <- select(hormoneqs, -c(collection_id:dataset_id))
+hormoneqs$subjectid <- hormoneqs$subjectkey
+hormoneqs$eventname <- hormoneqs$visit
+hormonedhea <- read.delim(paste0(data_dir,"abcd_hsss01.txt"))
+hormonedhea = hormonedhea[-1,]
+hormonedhea = droplevels(hormonedhea)
+hormonedhea <- select(hormonedhea, -c(collection_id:dataset_id))
+hormonedhea$subjectid <- hormonedhea$subjectkey
+procfmri <- read.delim(paste0(data_dir,"fmriresults01.txt"))
+procfmri = procfmri[-1,]
+procfmri = droplevels(procfmri)
+procfmri <- select(procfmri, -c(collection_id:dataset_id))
+procfmri$subjectid <- procfmri$subjectkey
+mriqc1 <- read.delim(paste0(data_dir,"mriqcrp102.txt"))
+mriqc1 = mriqc1[-1,]
+mriqc1 = droplevels(mriqc1)
+mriqc1 <- select(mriqc1, -c(collection_id:dataset_id))
+mriqc1$subjectid <- mriqc1$subjectkey
+fsqc <- read.delim(paste0(data_dir,"freesqc01.txt"))
+fsqc = fsqc[-1,]
+fsqc = droplevels(fsqc)
+fsqc <- select(fsqc, -c(collection_id:dataset_id))
+fsqc$subjectid <- fsqc$subjectkey
+main<- left_join(procfmri,mriqc1, by=c("subjectid"))
+main<- left_join(main,socio, by=c("subjectid", "eventname"))
+main<- left_join(main,sites, by=c("subjectid", "eventname"))
+main <- left_join(main, income, by=c("subjectid", "eventname"))
+main <- left_join(main, yksads, by=c("subjectid", "eventname"))
+main <- left_join(main, hormoneqs, by=c("subjectid", "eventname"))
+main <- left_join(main, hormonedhea, by=c("subjectid", "eventname"))
+main <- left_join(main, fsqc, by=c("subjectid", "eventname"))
+main <- filter(main, eventname=="baseline_year_1_arm_1")  #only baseline
+main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
+```
+
+## Filter by participants who passed FS QC
+
+```{r FS QC filter}
+goodFreeSurfer <- main$subjectid[which(main$fsqc_qc == 1)]
+goodFreeSurfer <- goodFreeSurfer[!is.na(goodFreeSurfer)]
+print(paste("Yay: ", length(goodFreeSurfer), " Nay: ", length(main$subjectid[!is.na(main$fsqc_qc)]) - length(goodFreeSurfer), sep=""))
+main<- filter(main, fsqc_qc==1)
+```
+Pull only participants with good FS.
+
+## Filter by participants who have T1's and T2s in procfmri
+```{r With T1s}
+subjs <- main$subjectid[which(main$scan_type == "MR structural (T1)"| main$scan_type=="MR structural (T2)")]
+length(subjs)
+length(unique(subjs))
+main <- filter(main, subjectid %in% subjs)
+```
+
+## Look at racial composition across sites
+
+```{r look at KSADS and race and adversity}
+table(main$site_id_l, main$race_ethnicity)
+temp <- select(main, ksads_ptsd_raw_754_p:ksads_ptsd_raw_770_p) 
+temp[] <- lapply(temp, function(x) as.numeric(as.character(x))) #turn to numeric
+main$ksads_ptsd_sum <- rowSums(temp) #don't remove NAs because they wil turn into 0's
+hist(main$ksads_ptsd_sum) #this is weird, there's several people with 1's in every column, see if this correlates with income or something? It doesn't--it's weird.
+main <- filter(main, site_id_l=="") #filter on a test site
+table(main$ksads_ptsd_sum, main$race_ethnicity)
+```
+
+## Read in image data
+```{r Merge in image data, echo=FALSE}
+subjlist <- read.csv(paste0(subjlist_dir,"n50_site16_cassidy_ksads_filter.csv"), col.names = c("num", "subjectid"))
+rawimages= read.delim(paste0(data_dir,"image03.txt"))
+rawimages = rawimages[-1,]
+rawimages = droplevels(rawimages)
+rawimages$subjectid <- rawimages$subjectkey
+rawimages$subjectid <- str_remove(rawimages$subjectid, "_") #subjectid has a _ in it after NDAR in the NDAR data, doesn't match subject list
+
+```
+
+
+## Write out AWS addresses for T1s and T2s for subject lists already created
+```{r aws addresses, echo=FALSE}
+image_files <- left_join(subjlist, rawimages, by="subjectid")
+image_files <- filter(image_files, visit=="baseline_year_1_arm_1")
+image_files_T2s_T1s <- filter(image_files, image_description %in% c("ABCD-T1-NORM","ABCD-T2-NORM"))
+AWS_site16_T2s_T1s_cassidy <- select(image_files_T2s_T1s, image_file)
+write.table(AWS_one_site_0.2mm_rest_T1s$image_file, paste0(subjlist_dir, "AWS_release2_site20_0.2mm_rest_T1s.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+
+```
+
+
+For when we want to look at QC metrics or motion on a scan-by-scan basis.
+```{r add in imaging files, echo=FALSE}
+# procfmri <- read.delim(paste0(nda_data_dir,"fmriresults01.txt"))
+# procfmri = procfmri[-1,]
+# procfmri = droplevels(procfmri)
+# procfmri <- select(procfmri, -c(collection_id:subjectkey))
+# procfmri$subjectid <- procfmri$src_subject_id
+#mriqc1 <- read.delim(paste0(data_dir,"mriqc02.txt"))
+# mriqc1 = mriqc1[-1,]
+# mriqc1 = droplevels(mriqc1)
+# mriqc1 <- select(mriqc1, -c(collection_id:subjectkey))
+# mriqc1$subjectid <- mriqc1$src_subject_id
+# mriqc2 <- read.delim(paste0(data_dir,"mriqcp202.txt"))
+# mriqc2 = mriqc2[-1,]
+# mriqc2 = droplevels(mriqc2)
+# mriqc2 <- select(mriqc2, -c(collection_id:subjectkey))
+# mriqc2$subjectid <- mriqc2$src_subject_id
+# fsqc <- read.delim(paste0(data_dir,"freesqc01.txt"))
+# fsqc = fsqc[-1,]
+# fsqc = droplevels(fsqc)
+# fsqc <- select(fsqc, -c(collection_id:subjectkey))
+# fsqc$subjectid <- fsqc$src_subject_id
+# betnet <- read.delim(paste0(data_dir,"abcd_betnet02.txt"))
+# betnet = betnet[-1,]
+# betnet = droplevels(betnet)
+# betnet <- select(betnet, -c(collection_id:subjectkey))
+# betnet$subjectid <- betnet$src_subject_id
+# sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"))
+# sites = sites[-1,]
+# sites = droplevels(sites)
+# sites <- select(sites, -c(collection_id:subjectkey))
+# sites$subjectid <- sites$src_subject_id
+# sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"))
+# sites = sites[-1,]
+# sites = droplevels(sites)
+# sites <- select(sites, -c(collection_id:subjectkey))
+# sites$subjectid <- sites$src_subject_id
+#main<- right_join(procfmri,main, by="subjectid")
+# main<- left_join(main,mriqc2, by="subjectid")
+# main<- left_join(main,fsqc, by="subjectid")
+# main<- left_join(main,betnet, by="subjectid")
+# main<- left_join(main,sites, by="subjectid")
+```

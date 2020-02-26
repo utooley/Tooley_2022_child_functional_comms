@@ -1,0 +1,10 @@
+id0,id1,img
+sub-NDARINV05X0LM1N,run-03,sub-NDARINV05X0LM1N/func/sub-NDARINV05X0LM1N_task-rest_run-03_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV05X0LM1N,run-02,sub-NDARINV05X0LM1N/func/sub-NDARINV05X0LM1N_task-rest_run-02_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV05X0LM1N,run-01,sub-NDARINV05X0LM1N/func/sub-NDARINV05X0LM1N_task-rest_run-01_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV05YY477E,run-04,sub-NDARINV05YY477E/func/sub-NDARINV05YY477E_task-rest_run-04_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV05YY477E,run-03,sub-NDARINV05YY477E/func/sub-NDARINV05YY477E_task-rest_run-03_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV05YY477E,run-02,sub-NDARINV05YY477E/func/sub-NDARINV05YY477E_task-rest_run-02_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV05YY477E,run-01,sub-NDARINV05YY477E/func/sub-NDARINV05YY477E_task-rest_run-01_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV06WHVUPX,run-04,sub-NDARINV06WHVUPX/func/sub-NDARINV06WHVUPX_task-rest_run-04_space-T1w_desc-preproc_bold.nii.gz
+sub-NDARINV06WHVUPX,run-03,sub-NDARINV06WHVUPX/func/sub-NDARINV06WHVUPX_task-rest_run-03_space-T1w_desc-preproc_bold.nii.gz

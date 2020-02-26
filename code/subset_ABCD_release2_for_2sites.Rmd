@@ -1,0 +1,316 @@
+---
+title: "Filtering Out ABCD Participants From Release 2 for 2 Sites with 'Good' RS Data"
+output: html_document
+---
+Start at Chunk 12 of previous script for Release 1.1,just using the .txt files to filter out participants.
+
+# Starting from scratch for participants with T1s in Release 1.1
+
+Found out in mid-January that there are only ~2600 T1s in release 1.1, so need to filter on having a release ppc-ed T1 first. Here, I start from the .txt files instead of the compiled .RDS data on my local computer, and just try to pull a subject list that I can start downloading.
+
+```{r Read in all text files, echo=FALSE}
+library(dplyr)
+library(summarytools)
+#local computer
+data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2/'
+output_data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/Release2/'
+subjlist_dir='/Users/utooley/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/'
+procfmri <- read.delim(paste0(data_dir,"fmriresults01.txt"))
+procfmri = procfmri[-1,]
+procfmri = droplevels(procfmri)
+procfmri <- select(procfmri, -c(collection_id:dataset_id))
+procfmri$subjectid <- procfmri$subjectkey
+mriqc1 <- read.delim(paste0(data_dir,"mriqcrp102.txt"))
+mriqc1 = mriqc1[-1,]
+mriqc1 = droplevels(mriqc1)
+mriqc1 <- select(mriqc1, -c(collection_id:dataset_id))
+mriqc1$subjectid <- mriqc1$subjectkey
+mriqc2 <- read.delim(paste0(data_dir,"mriqcrp202.txt"))
+mriqc2 = mriqc2[-1,]
+mriqc2 = droplevels(mriqc2)
+mriqc2 <- select(mriqc2, -c(collection_id:dataset_id))
+mriqc2$subjectid <- mriqc2$subjectkey
+fsqc <- read.delim(paste0(data_dir,"freesqc01.txt"))
+fsqc = fsqc[-1,]
+fsqc = droplevels(fsqc)
+fsqc <- select(fsqc, -c(collection_id:dataset_id))
+fsqc$subjectid <- fsqc$subjectkey
+betnet <- read.delim(paste0(data_dir,"abcd_betnet02.txt"))
+betnet = betnet[-1,]
+betnet = droplevels(betnet)
+betnet <- select(betnet, -c(collection_id:dataset_id))
+betnet$subjectid <- betnet$subjectkey
+sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"))
+sites = sites[-1,]
+sites = droplevels(sites)
+sites <- select(sites, -c(collection_id:dataset_id))
+sites$subjectid <- sites$subjectkey
+sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"))
+sites = sites[-1,]
+sites = droplevels(sites)
+sites <- select(sites, -c(collection_id:dataset_id))
+sites$subjectid <- sites$subjectkey
+rawimages= read.delim(paste0(data_dir,"image03.txt"))
+rawimages = rawimages[-1,]
+rawimages = droplevels(rawimages)
+rawimages$subjectid <- rawimages$subjectkey
+main<- left_join(procfmri,mriqc1, by="subjectid")
+main<- left_join(main,mriqc2, by="subjectid")
+main<- left_join(main,fsqc, by="subjectid")
+main<- left_join(main,betnet, by="subjectid")
+main<- left_join(main,sites, by="subjectid")
+main<- left_join(main,rawimages, by="subjectid")
+#write.csv(main,paste0(data_dir,"image_and_demo_data_release2_071319.csv"))
+```
+
+## Filter by participants who passed FS QC
+
+```{r FS QC filter}
+goodFreeSurfer <- main$subjectid[which(main$fsqc_qc == 1)]
+goodFreeSurfer <- goodFreeSurfer[!is.na(goodFreeSurfer)]
+print(paste("Yay: ", length(goodFreeSurfer), " Nay: ", length(main$subjectid[!is.na(main$fsqc_qc)]) - length(goodFreeSurfer), sep=""))
+main<- filter(main, fsqc_qc==1)
+```
+Pull only participants with good FS, procfmri from 46792 to 46125.
+
+## Filter by participants who have T1's in procfmri
+## Find participants with more than 10 min of good resting-state data
+```{r With T1s}
+subjs <- main$subjectid[which(main$scan_type == "MR structural (T1)")]
+length(subjs)
+length(unique(subjs))
+main <- filter(main, subjectid %in% subjs)
+```
+30655 subjects (10925 unique subjects) with processed T1s in procfmri. Filtering by these subjects reduces size of procfmri to 322265. 
+
+## Find participants with more than 10 min of good resting-state data and good T1s
+```{r Only good data}
+#turn from factors into numeric
+main$iqc_rsfmri_ok_ser <- as.numeric(as.character(main$iqc_rsfmri_ok_ser))
+main$iqc_t1_ok_ser <- as.numeric(as.character(main$iqc_t1_ok_ser))
+main$rsfmri_c_ngd_ntpoints<- as.numeric(as.character(main$rsfmri_c_ngd_ntpoints))
+main <- filter(main, iqc_rsfmri_ok_ser>=2 &iqc_t1_ok_ser > 0 & rsfmri_c_ngd_ntpoints > 750)
+dim(main)
+length(unique(main$subjectid))
+```
+NOTE: Now am pulling every who has 2 or more good quality scans, since motion exclusions resulted in too little data. 10 minutes of quality resting-state fMRI files (i.e., 5 mins x 60 secs x 0.8 TR = 375)
+ABCD MRI QC Raw Part 1: iqc_rsfmri_ok_ser > 0 
+ABCD MRI QC Raw Part 1: iqc_t1_ok_ser > 0 (for registration to T1w image)
+ABCD rsfMRI Gordon Network Correlations: rsfmri_c_ngd_ntpoints > 375 (if use 750, that gives 10 min of data)
+
+Results in 6439 unique participants. Main filtering is on the rsfmri good timepoints.
+
+## Filter out all participants with mean motion above 0.2 mm or 0.3 mm
+```{r Filter on motion}
+main$iqc_rsfmri_ok_mean_motion_filt<- as.numeric(as.character(main$iqc_rsfmri_ok_mm_filt))
+
+subj_list_0.2mm_FD<- main %>% filter(., iqc_rsfmri_ok_mean_motion_filt< 0.2) %>% select(subjectid,site_id_l, interview_age.x, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt, scan_type)
+subj_list_0.3mm_FD<- main %>% filter(., iqc_rsfmri_ok_mean_motion_filt< 0.3) %>% select(subjectid, site_id_l, interview_age.x, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+length(unique(main$subjectid))
+length(unique(subj_list_0.2mm_FD$subjectid))
+length(unique(subj_list_0.3mm_FD$subjectid))
+```
+0.2 mm threshold with the respiratory filtering leaves 5270 from 6439 unique subjects.
+0.3 mm threshold with the respiratory filtering leaves 6090 from 6439 unique subjects.
+
+## Pick a few sites with more subjects
+```{r Look at site distributions}
+view(dfSummary(select(main, site_id_l)))
+freq(subj_list_0.2mm_FD$site_id_l)
+## Filter out participants from only three sites
+two_sites_only_s14s20_0.2mm_FD <- filter(subj_list_0.2mm_FD, site_id_l=="site20"|site_id_l=="site14")
+two_sites_only_0.3mm_FD <- filter(subj_list_0.3mm_FD, site_id_l=="site20"|site_id_l=="site14")
+one_site_only_site16_0.2mm_FD <- filter(subj_list_0.2mm_FD,site_id_l=="site16")
+one_site_only_site16_0.3mm_FD <- filter(subj_list_0.3mm_FD,site_id_l=="site16")
+```
+
+Site20, Site16, and Site14 have the largest number of images, pick them.
+For one site, use Site16, which has 14% of images and n=716. The replication site(s) will be site 20 and 14, which each has a similar percentage of data, n~=300.
+
+## Write out subject lists for three sites
+```{r Write out subject lists}
+length(unique(two_sites_only_s14s20_0.2mm_FD$subjectid))
+length(unique(two_sites_only_0.3mm_FD$subjectid))
+length(unique(one_site_only_site16_0.2mm_FD$subjectid))
+length(unique(one_site_only_site16_0.3mm_FD$subjectid))
+subjlist_2_sites_0.2mm_FD <- unique(two_sites_only_s14s20_0.2mm_FD$subjectid)
+subjlist_2_sites_0.3mm_FD <- unique(two_sites_only_0.3mm_FD$subjectid)
+subjlist_1_site_0.2mm_FD <- unique(one_site_only_site16_0.2mm_FD$subjectid)
+subjlist_1_site_0.3mm_FD <- unique(one_site_only_site16_0.3mm_FD$subjectid)
+write.csv(subjlist_2_sites_0.2mm_FD, paste0(subjlist_dir, "n620_release2_site14_site16_0.2mm.csv"))
+write.csv(subjlist_2_sites_0.3mm_FD, paste0(subjlist_dir, "n730_release2_site14_site16_0.3mm.csv"))
+write.csv(subjlist_1_site_0.2mm_FD, paste0(subjlist_dir, "n716_release2_site20_0.2mm.csv")) #THESE ARE THE WRONG NAMES!
+write.csv(subjlist_1_site_0.3mm_FD, paste0(subjlist_dir, "n799_release2_site20_0.3mm.csv"))
+```
+The two replication sites together have 620 subjects < 0.2 mm FD, 730 subjects < 0.3 mm.
+Site16 has 799 participants with 10 min of rest and < 0.3 mm FD (with resp filter) average, 716 < 0.2mm.
+
+## Read them back in and write out AWS addresses for 0.3 mm two sites
+```{r Merge in image data, echo=FALSE}
+subjlist <- read.csv(paste0(subjlist_dir, "n730_release2_site14_site16_0.3mm.csv"))
+subjlist$subjectid <- subjlist$x
+image_files <- left_join(subjlist, rawimages, by="subjectid")
+image_files <- filter(image_files, visit=="baseline_year_1_arm_1")
+image_files_rest_T1s <- filter(image_files, image_description %in% c("ABCD-T1", "ABCD-rsfMRI", "ABCD-T1-NORM", "ABCD-fMRI-FM-PA", "ABCD-fMRI-FM-AP"))
+AWS_release2_site14site16_0.3mm_rest_T1s <- select(image_files_rest_T1s, image_file)
+write.table(AWS_release2_site14site16_0.3mm_rest_T1s$image_file, paste0(subjlist_dir, "AWS_release2_site14site16_0.3mm_rest_T1s.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+```
+
+## Read them back in and write out AWS addresses for 0.2 mm two sites
+```{r Merge in image data, echo=FALSE}
+subjlist <- read.csv(paste0(subjlist_dir, "n620_release2_site14_site16_0.2mm.csv"))
+subjlist$subjectid <- subjlist$x
+image_files <- left_join(subjlist, rawimages, by="subjectid")
+#filter for only the first visit
+image_files <- filter(image_files, visit=="baseline_year_1_arm_1")
+image_files_rest_T1s <- filter(image_files, image_description %in% c("ABCD-T1", "ABCD-rsfMRI", "ABCD-T1-NORM", "ABCD-Diffusion-FM-AP","ABCD-Diffusion-FM-PA","ABCD-DTI", "ABCD-fMRI-FM-PA", "ABCD-fMRI-FM-AP"))
+AWS_release2_site14site20_rest_T1s_dwis <- select(image_files_rest_T1s, image_file)
+write.table(AWS_release2_site14site20_rest_T1s_dwis$image_file, paste0(subjlist_dir, "AWS_release2_site14site16_0.2mm_rest_T1s_dwis.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+```
+
+## Read them back in and write out AWS addresses for one site at 0.2 mm
+```{r Merge in image data, echo=FALSE}
+subjlist <- read.csv(paste0(subjlist_dir, "n716_release2_site20_0.2mm.csv"))
+subjlist$subjectid <- subjlist$x
+image_files <- left_join(subjlist, rawimages, by="subjectid")
+image_files <- filter(image_files, visit=="baseline_year_1_arm_1")
+image_files_rest_T1s <- filter(image_files, image_description %in% c("ABCD-T1", "ABCD-rsfMRI", "ABCD-T1-NORM","ABCD-fMRI-FM-PA", "ABCD-fMRI-FM-AP"))
+AWS_one_site_0.2mm_rest_T1s <- select(image_files_rest_T1s, image_file)
+write.table(AWS_one_site_0.2mm_rest_T1s$image_file, paste0(subjlist_dir, "AWS_release2_site20_0.2mm_rest_T1s.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+```
+
+## Read them back in and write out AWS addresses for one site at 0.2 mm with diffusion data
+```{r Merge in image data, echo=FALSE}
+subjlist <- read.csv(paste0(subjlist_dir, "n716_release2_site20_0.2mm.csv"))
+subjlist$subjectid <- subjlist$x
+image_files <- left_join(subjlist, rawimages, by="subjectid")
+image_files <- filter(image_files, visit=="baseline_year_1_arm_1")
+image_files_rest_T1s <- filter(image_files, image_description %in% c("ABCD-T1", "ABCD-rsfMRI", "ABCD-T1-NORM", "ABCD-Diffusion-FM-AP","ABCD-Diffusion-FM-PA","ABCD-DTI", "ABCD-fMRI-FM-PA", "ABCD-fMRI-FM-AP"))
+AWS_one_site_0.2mm_rest_T1s <- select(image_files_rest_T1s, image_file)
+write.table(AWS_one_site_0.2mm_rest_T1s$image_file, paste0(subjlist_dir, "AWS_release2_site20_0.2mm_rest_T1s_dwis.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+```
+Adding DWIs ups the number of tar.gz files for download from 3607 lines to 4381 lines.
+
+# Previous code
+This runs after using the nda-18 code repo to merge all the data together into one spreadsheet.
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(summarytools)
+library(PerformanceAnalytics)
+nda_data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/code/analysis-nda18/data/'
+output_data_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/'
+subjlist_dir='~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/'
+nda17 = readRDS(paste0(nda_data_dir,"nda18.Rds"))
+rawimages= read.delim(paste0("~/Documents/projects/in_progress/spatial_topography_parcellations_ABCD/data/ImageandQCandDemo/image03.txt"))
+rawimages = rawimages[-1,]
+rawimages = droplevels(rawimages)
+rawimages <- select(rawimages, -c(collection_id:subjectkey))
+rawimages$subjectid <- rawimages$src_subject_id
+```
+
+## Filter by participants who passed FS QC
+
+```{r FS QC filter}
+goodFreeSurfer <- nda17$src_subject_id[which(nda17$fsqc_qc == "pass")]
+goodFreeSurfer <- goodFreeSurfer[!is.na(goodFreeSurfer)]
+print(paste("Yay: ", length(goodFreeSurfer), " Nay: ", length(nda17$src_subject_id[!is.na(nda17$fsqc_qc)]) - length(goodFreeSurfer), sep=""))
+nda17 <- filter(nda17, fsqc_qc=="pass")
+```
+
+## Look at site distributions
+```{r Look at site distributions}
+three_sites_only <- view(dfSummary(select(nda17, abcd_site:race.ethnicity)))
+freq(nda17$abcd_site)
+demo_only <- select(nda17, abcd_site:race.ethnicity)
+chart.Correlation(demo_only[,sapply(demo_only, is.numeric)], histogram=TRUE, pch=19, )
+```
+
+## Filter out participants from only three sites
+```{r Filter out only three sites}
+three_sites_only <- filter(nda17, abcd_site=="site04"|abcd_site=="site13"|abcd_site=="site14")
+one_site_only <- filter(nda17, abcd_site=="site14")
+```
+Pick three with each ~7% of the sample, except for one site which has 10% (I didn't pull this one).
+
+## Find participants with more than 10 min of good resting-state data
+```{r Only good data}
+descr(nda17$iqc_rsfmri_good_ser)
+hist(nda17$iqc_rsfmri_good_ser)
+hist(three_sites_only$iqc_rsfmri_good_ser)
+three_sites_only_clean_rs <- filter(three_sites_only, iqc_rsfmri_ok_ser>=2 &iqc_t1_ok_ser > 0 & rsfmri_cor_network.gordon_ntpoints > 750)
+one_site_only_clean_rs <- filter(one_site_only, iqc_rsfmri_ok_ser>=2 &iqc_t1_ok_ser > 0 & rsfmri_cor_network.gordon_ntpoints > 750)
+```
+
+NOTE: Now am pulling every who has 2 or more good quality scans, since motion exclusions resulted in too little data. 5 minutes of quality resting-state fMRI files (i.e., 5 mins x 60 secs x 0.8 TR = 375)
+ABCD MRI QC Raw Part 1: iqc_rsfmri_ok_ser > 0 (if use >=2, 830 participants at 3 sites)
+ABCD MRI QC Raw Part 1: iqc_t1_ok_ser > 0 (for registration to T1w image) (829 participants at 3 sites)
+ABCD rsfMRI Gordon Network Correlations: rsfmri_c_ngd_ntpoints > 375 (if use 750, 517 participants at 3 sites)
+## Do these 3 sites differ in their rs quality?
+
+```{r Only good rs data}
+three_sites_only %>% group_by(abcd_site) %>% filter(., !is.na(iqc_rsfmri_good_ser) & !is.na(iqc_rsfmri_ok_mean_motion)) %>%  summarise(goodseries=mean(iqc_rsfmri_good_ser), mean_motion=mean(iqc_rsfmri_ok_mean_motion))
+#To look at mean motion in each sequence type
+# idx = grep("mean_motion", names(nda17))
+# for(i in 1:length(idx)) {
+#    d = three_sites_only_clean_rs[[idx[i]]]
+#    print(paste("measure: ",names(three_sites_only_clean_rs)[idx[i]]))
+#    print(summary(as.numeric(as.character(d))))
+# }
+```
+
+## Make a subject list for participants from these 3 sites, both with mean motion < 0.2 mm and mean motion < 0.3 mm
+
+```{r Filter different motion thresholds}
+subj_list_3sites<- select(three_sites_only_clean_rs,subjectid, abcd_site, age, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+subj_list_1site<- select(one_site_only_clean_rs,subjectid, abcd_site, age, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+#make one with only subjects with filtered FD < 0.2 mm
+subj_list_3sites_0.2mm_FD<- three_sites_only_clean_rs %>% filter(., iqc_rsfmri_ok_mean_motion_filt< 0.2) %>% select(subjectid, abcd_site, age, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+subj_list_3sites_0.3mm_FD<- three_sites_only_clean_rs %>% filter(., iqc_rsfmri_ok_mean_motion_filt< 0.3) %>% select(subjectid, abcd_site, age, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+subj_list_1site_0.2mm_FD<- one_site_only_clean_rs %>% filter(., iqc_rsfmri_ok_mean_motion_filt< 0.2) %>% select(subjectid, abcd_site, age, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+subj_list_1site_0.3mm_FD<- one_site_only_clean_rs %>% filter(., iqc_rsfmri_ok_mean_motion_filt< 0.3) %>% select(subjectid, abcd_site, age, iqc_rsfmri_ok_mean_motion, iqc_rsfmri_ok_mean_motion_filt)
+dim(subj_list_3sites)
+dim(subj_list_3sites_0.2mm_FD)
+dim(subj_list_3sites_0.3mm_FD)
+```
+Using the mean motion from all "OK" rest scans, and the FD estimates using the respiratory filter. Also, write it out so we can just read it in next time.
+All: 517
+0.2mm: 427
+0.3mm: 490
+Right now, exclusion criteria is passing FS QC, having 2 or more good 5-min rest scans, having mean motion (estimated using the Power calculation and the respiratory filter) < 0.3 mm.
+
+## Get AWS addresses and data
+
+```{r Read in AWS Fast Track addresses}
+images<- left_join(subj_list_1site_0.2mm_FD,rawimages, by="subjectid")
+image_files_rest_FMs_T1s <- filter(images, image_description %in% c("ABCD-T1", "ABCD-rsfMRI", "ABCD-T1-NORM", "ABCD-fMRI-FM-PA", "ABCD-fMRI-FM-AP"))
+AWS_raw_site14_0.2mm_rest_FMs_T1s <- select(image_files_rest_FMs_T1s, image_file)
+write.table(AWS_raw_site14_0.2mm_rest_FMs_T1s$image_file, paste0(subjlist_dir, "AWS_raw_site14_0.2mm_rest_FMs_T1s.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+```
+Pull both T1 and T1-NORM, rest and fieldmaps.
+
+```{r Write out subject lists}
+write.csv(subj_list_3sites, paste0(subjlist_dir, "n517_three_sites.csv"))
+write.csv(subj_list_3sites_0.2mm_FD, paste0(subjlist_dir, "n427_three_sites_0.2mm.csv"))
+write.csv(subj_list_3sites_0.3mm_FD, paste0(subjlist_dir, "n490_three_sites_0.3mm.csv"))
+```
+
+
+## Read in subject lists, merge with image data, and get AWS addresses
+
+```{r Merge in image data, echo=FALSE}
+procfmri <- read.delim(paste0(nda_data_dir,"fmriresults01.txt"))
+procfmri = procfmri[-1,]
+procfmri = droplevels(procfmri)
+procfmri <- select(procfmri, -c(collection_id:subjectkey))
+procfmri$subjectid <- procfmri$src_subject_id
+subjlist <- read.csv(paste0(output_subjlist_dir, "n490_three_sites_0.3mm.csv"))
+image_files <- left_join(subjlist, procfmri, by="subjectid")
+```
+
+```{r Filter rsfMRI images, print out AWS addresses to a .txt file}
+image_files_rest <- filter(image_files, session_det %in% c("ABCD-MPROC-rest", "ABCD-MPROC-REST"))
+AWS_threesites_0.3mm_rest <- select(image_files_rest, derived_files)
+write.table(AWS_threesites_0.3mm_rest$derived_files, paste0(output_data_dir, "AWS_threesite_0.3mm_rest.txt"), row.names = FALSE, quote = FALSE, col.names = FALSE)
+```

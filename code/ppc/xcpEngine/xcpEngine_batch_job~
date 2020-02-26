@@ -1,0 +1,43 @@
+#!/bin/bash
+MACKEY_HOME=/data/picsl/mackey_group
+project_dir=/picsl/mackey_group/Ursula/projects/in_progress/within_between_network_conn_CBPD
+sublist_dir=/data/picsl/mackey_group/Ursula/projects/in_progress/within_between_network_conn_CBPD
+tools_dir=${MACKEY_HOME}/tools/singularity
+
+#FULL_COHORT=${sublist_dir}/n50_cohort_usable_t1_rest_1mm_outliers_10_2mm_11518.csv
+FULL_COHORT=${sublist_dir}/data/subjectLists/test_cohort_2subs.csv
+NJOBS=`wc -l < $FULL_COHORT`
+
+if [[ ${NJOBS} == 0 ]]; then
+    exit 0
+fi
+#NJOBS=2
+
+cat << EOF > xcpParallel.sh
+#$ -V
+#$ -j y
+#$ -o /data${project_dir}/output/qsub_output
+#$ -t 1-${NJOBS}
+
+# Adjust these so they work on your system
+SNGL=/share/apps/singularity/2.5.1/bin/singularity
+SIMG=${tools_dir}/xcpEngine.simg
+FULL_COHORT=${FULL_COHORT}
+
+# Create a temp cohort file with 1 line
+HEADER=\$(head -n 1 \$FULL_COHORT)
+LINE_NUM=\$( expr \$SGE_TASK_ID + 1 )
+LINE=\$(awk "NR==\$LINE_NUM" \$FULL_COHORT)
+TEMP_COHORT=\${FULL_COHORT}.\${SGE_TASK_ID}.csv
+echo \$HEADER > \$TEMP_COHORT
+echo \$LINE >> \$TEMP_COHORT
+
+\$SNGL run -B /data:/mnt \$SIMG \\
+  -c /mnt\${TEMP_COHORT#/data} \\
+  -d /mnt${project_dir}/code/ppc/fc-36p-nogsr-meancsfwm_spikereg.dsn \\
+  -o /mnt/picsl/mackey_group//BPD/CBPD_bids/derivatives/xcpEngine_nogsr \\
+  -i \$TMPDIR
+
+EOF
+
+qsub xcpParallel.sh
