@@ -1,5 +1,8 @@
 spatial_topography-Data_Management.txt
 .bash_history
+.bashrc
+data/output
+CBIG_config_CUBIC_FS6.0.sh
 .config/
 .history
 .java

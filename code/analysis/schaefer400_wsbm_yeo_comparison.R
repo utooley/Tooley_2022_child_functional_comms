@@ -313,19 +313,19 @@ for (hemi in hemispheres){
 
 # Plot the search over k ------------------------------------------------------
 k_dir="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/search_over_k/"
-logevidence=matrix(NA,670,7)
-for (i in 1:7){
+logevidence=matrix(NA,670,18)
+for (i in 1:18){
   k=i+3
   try(mine <- read.csv(paste0(k_dir, "wsbm_search_over_k",k,"_n670_site16_30trials.csv")))
-  logevidence[,i] <- mine$subjlist_.4
+  logevidence[,i] <- with(mine, if("subjlist_.4" %in% colnames(mine)) subjlist_.4 else Var4)
 }
 #remove the outlier subject sub-NDARINVK0U3PRRR
-colnames(logevidence)=lapply(4:10, function(x) paste0("k",x)) #give them column names
+colnames(logevidence)=lapply(4:21, function(x) paste0("k",x)) #give them column names
 #k10 is full of 0's, filter out those who haven't finished k9
 logevidence2 <- filter(data.frame(logevidence), !is.na(logevidence[,6]))
 logevidence[logevidence==0] <- NA
-longdata <- melt(logevidence2, varnames = c("x","k"))
-p<-ggplot(longdata, aes(x=variable, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(group=1),
+longdata <- melt(logevidence, varnames = c("x","k"))
+p<-ggplot(longdata, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(group=1),
                                                                                                                           fun.y = median, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()
 p
 

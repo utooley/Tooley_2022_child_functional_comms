@@ -1,17 +1,21 @@
 #!/bin/csh
 
+#run this with qsub -l h_vmem=50.0G,s_vmem=49.7G -j y -o ${SPATIAL_TOPOGRAPHY}/output/job_output/ -cwd /cbica/projects/spatial_topography/code/yeo_networks/test_yeo_code.csh
+
+set output_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/"
+set cluster_out = "${output_dir}/cluster_yeo7_n131_5tries" #CHANGE THIS!
 set orig_data_dir = "${ABCD_DATA}/bids_release2_site16/derivatives/surfaces"
-set output_dir = $1
-set sub_list = "/cbica/projects/spatial_topography/dropbox/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/yeo_networks/n2_subjlist_test_CUBIC.txt"
-set surf_list = "/cbica/projects/spatial_topography/dropbox/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/yeo_networks/n2_fullpaths_test_CUBIC.csv"
+set sub_list = "/cbica/projects/spatial_topography/data/subjLists/release2/site16/yeo_networks/n131_site16_subjlist_tworunsonly_nonan.txt"
+set surf_list = "/cbica/projects/spatial_topography//data/subjLists/release2/site16/yeo_networks/n131_site16_fullpaths_surfs_tworunsonly_nonan.csv"
 set sub_dir = "${ABCD_DATA}/bids_release2_site16/derivatives/surfaces"
 set subjects = `cat $sub_list`
 set code_dir = "${CBIG_CODE_DIR}/stable_projects/brain_parcellation/Yeo2011_fcMRI_clustering"
-set out_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/"
 set surf_stem = "fs6_sm4.8_task-rest_uncensor_trunc_reshape"
 set outlier_stem = "_FDRMS0.2_DVARS50_motion_outliers"
 set target = fsaverage6
 set roi = fsaverage3
+set num_clusters = 7
+set num_tries = 5
 
 ## Create folder structure within output_dir, and make soft links of input files to orig_data_dir
 foreach s ($subjects)
@@ -33,4 +37,4 @@ mkdir -p $output_dir/clustering
 ${code_dir}/CBIG_Yeo2011_compute_fcMRI_surf2surf_profiles_subjectlist.csh -sd ${sub_dir} -sub_ls ${sub_list} -surf_ls ${surf_list} -target $target -roi $roi
 
 #Call the clustering function to cluster FC profiles for each subject
-#${code_dir}/CBIG_Yeo2011_cluster_fcMRI_surf2surf_profiles_subjectlist.csh -sd ${sub_dir} -sub_ls ${sub_list} -n ${num_clusters} -out ${cluster_out} -tries ${num_tries} -mesh $target
+${code_dir}/CBIG_Yeo2011_cluster_fcMRI_surf2surf_profiles_subjectlist.csh -sd ${sub_dir} -sub_ls ${sub_list} -n ${num_clusters} -out ${cluster_out} -tries ${num_tries} -mesh $target -roi ${roi}
