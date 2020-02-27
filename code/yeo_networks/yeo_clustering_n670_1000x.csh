@@ -1,6 +1,6 @@
 #!/bin/csh
 
-#run this with qsub -l h_vmem=50.0G,s_vmem=49.7G -j y -o ${SPATIAL_TOPOGRAPHY}/output/job_output/ -cwd /cbica/projects/spatial_topography/code/yeo_networks/test_yeo_code.csh
+#run this with qsub -l h_vmem=50.0G,s_vmem=49.7G -j y -o ${SPATIAL_TOPOGRAPHY}/output/job_output/ -cwd /cbica/projects/spatial_topography/code/yeo_networks/yeo_clustering_n670_1000x.csh
 
 set output_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries"
 set cluster_out = "${output_dir}/yeo7_n670_2runsonly_1000tries" #CHANGE THIS!
