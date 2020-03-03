@@ -78,6 +78,27 @@ subjlist <- subjlist %>% mutate(., name4=ifelse(is.na(var4), NA, paste0("/data/j
 write.csv(subjlist, paste0(subjlist_vars,"parcellation/n",length(unique(subjlist$id)),"_filtered_runs_site16_postprocess.csv"))
 
 
+# Save a list of motion files for each of the two runs used ---------------
+library(dplyr)
+subjlist <- read.csv("/cbica/projects/spatial_topography/data/subjLists/release2/site16/parcellation/n670_filtered_runs_site16_postprocess.csv")
+subjlist <-  select(subjlist,id:var4)
+#truncate motion files to 370 lines using bash
+#Run in BASH
+"cd /cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/;
+for file in `find . -iname '*_tmask.1D' | cut -d. -f2`;
+do
+echo ${file}
+head -n370 ${file:1}.1D > ${file:1}_truncate.1D
+done"
+
+subjlist <- subjlist %>% mutate(., name1=paste0("/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/",id,"/",var1,"/confound2/mc/",id,"_",var1, "_tmask_truncate.1D"))
+subjlist <- subjlist %>% mutate(., name2=paste0("/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/",id,"/",var2,"/confound2/mc/",id,"_",var2, "_tmask_truncate.1D"))
+subjlist <- subjlist %>% mutate(., name3=ifelse(is.na(var3), NA,paste0("/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/",id,"/",var3,"/confound2/mc/",id,"_",var3, "_tmask_truncate.1D")))
+subjlist <- subjlist %>% mutate(., name4=ifelse(is.na(var4), NA, paste0("/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/",id,"/",var4,"/confound2/mc/",id,"_",var4, "_tmask_truncate.1D")))
+
+#write it out somewhere 
+write.csv(subjlist, "/cbica/projects/spatial_topography/data/subjLists/release2/site16/n670_site16_motion_files.csv")
+
 # Make histograms of registration coverage ---------------------------------------
 xcp_qa_vars="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/"
 
