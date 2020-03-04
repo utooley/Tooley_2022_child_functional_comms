@@ -27,4 +27,8 @@ CBIG_DrawSurfaceMaps(clustered.lh_labels, clustered.rh_labels, 'fsaverage6','inf
 load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/yeo7_n670_2runsonly_1000tries.mat')
 load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n131_5tries/silhou_cmap.mat')
 
-CBIG_DrawSurfaceMaps(clustered.lh_s, clustered.rh_s, 'fsaverage6','inflated',min(clustered.lh_s), 0.5, color)
+CBIG_DrawSurfaceMaps(clustered.lh_s, clustered.rh_s, 'fsaverage6','inflated',0, 0.4, color)
+
+%read in WSBM data and relabel Schaefer400 annot file with WSBM assignments
+%can use CBIG_read_annotation.m
+%then use CBIG_VisualizeSurfaceAnnotationInFreeview to view.
