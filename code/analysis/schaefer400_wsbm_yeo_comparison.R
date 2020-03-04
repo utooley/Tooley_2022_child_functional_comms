@@ -285,7 +285,7 @@ for (hemi in hemispheres){
   }
 }
 
-#CONSENSUS REPRESENTATIVE PARTITION
+#CONSENSUS REPRESENTATIVE/SIMILARITY PARTITION
 hemispheres=c("left", "right")
 pans=c("medial", "lateral")
 for (hemi in hemispheres){
@@ -311,6 +311,8 @@ for (hemi in hemispheres){
   }
 }
 
+#RGB of colors for MATLAB
+colors <- t(col2rgb(c("black","gray","purple","blue","aquamarine","khaki1","magenta","orange", "red")))
 # Plot the search over k ------------------------------------------------------
 k_dir="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/search_over_k/"
 logevidence=matrix(NA,670,18)
