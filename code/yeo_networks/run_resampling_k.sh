@@ -2,7 +2,7 @@
 set -euo pipefail
 #$ -j y
 #$ -o /cbica/projects/spatial_topography/output/job_output/
-#$ -l h_vmem=30.5G,s_vmem=30.3G
+#$ -l h_vmem=150.5G,s_vmem=150.3G
 #$ -V
 #$ -cwd
 

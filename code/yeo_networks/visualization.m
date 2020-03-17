@@ -1,6 +1,6 @@
 %Checking Yeo code outputs
-cluster_dir='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries_mot_outliers/'
-file_name='yeo7_n670_2runsonly_1000tries_mot_outliers.mat'
+cluster_dir='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries_2/'
+file_name='yeo7_n670_2runsonly_1000tries_2.mat'
 
 clustered = load(fullfile(cluster_dir,file_name));
 
@@ -19,15 +19,15 @@ my_colors = [190   190  190
     
 
 %PLOT 7 NETWORKS-can change the colors to match WSBM colors?
-CBIG_DrawSurfaceMaps(clustered.lh_labels, clustered.rh_labels, 'fsaverage6','inflated',0, 7, my_colors)
-
 CBIG_DrawSurfaceMaps(clustered.lh_labels, clustered.rh_labels, 'fsaverage6','inflated',0, 7, ref.colors)
+
+CBIG_DrawSurfaceMaps(clustered.lh_labels, clustered.rh_labels, 'fsaverage5','inflated',0, 17, ref.colors)
 
 %Silhouettes/confidence maps-can change the colors?
 load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/yeo7_n670_2runsonly_1000tries.mat')
 load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n131_5tries/silhou_cmap.mat')
 
-CBIG_DrawSurfaceMaps(clustered.lh_s, clustered.rh_s, 'fsaverage6','inflated',0, 0.4, color)
+CBIG_DrawSurfaceMaps(clustered.lh_s, clustered.rh_s, 'fsaverage6','pial',0, 0.4, color)
 
 %read in WSBM data and relabel Schaefer400 annot file with WSBM assignments
 %can use CBIG_read_annotation.m
