@@ -12,6 +12,7 @@ library(data.table)
 wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/"
 subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
 yeo_dev_dir="/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries_mot_outliers/"
+yeo7_ref_dir="/cbica/projects/spatial_topography/tools/CBIG/stable_projects/brain_parcellation/Yeo2011_fcMRI_clustering/1000subjects_reference/"
 
 # Read in files -----------------------------------------------------------
 #Vector of WSBM community assignments
@@ -37,7 +38,8 @@ setwd("/cbica/projects/spatial_topography/output/images/brains/")
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 
 #FIGURE OUT HOW TO ROTATE ON A DIFFERENT AXIS FOR RGL
-#This edits the hidden function vis.coloredmeshes.rotating
+#This edits the hidden function vis.coloredmeshes.rotating, figure out a way to edit this permanently. 
+#Change x=0, y=0, z=1, maybe rpm
 trace(fsbrain:::brainview.sr, edit=TRUE)
 
 # Plot Yeo7 atlas on brain ---------------------------------------------------------
@@ -66,13 +68,13 @@ yeo_colors=colorRampPalette(c("#78797A", "#7B287E", "#5CA1C8", "#9F5AA4", "#0A90
 
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.region.values.on.subject(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
                              wsbm_consensus_rh, colormap=yeo_colors, "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
 #need only one hemisphere here
-vis.region.values.on.subject(subjects_dir, 'fsaverage5', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
                              wsbm_consensus_rh, colormap=yeo_colors,"inflated", views="sr", rgloptions = rgloptions, rglactions = rglactions)
 
 # Plot the Yeo developmental partition on brain ---------------------------
@@ -85,10 +87,15 @@ rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6',yeo_dev_lh, yeo_dev_rh, "inflated", colormap = yeo_colors,  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
-#This is still not working because it tries to display both instead of one! Could just write this to an annotation file, if I wanted.
+#try visualizing the annotation file instead! This enables rotation. Need to copy the annotation into the CBIG/Schaefer/Freesurfer5.3 subjects directory first
+#subjects_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/lh.yeodev.fsaverage6.annot";
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
+vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+ 
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',yeo_dev_lh, yeo_dev_rh, colormap=yeo_colors,"inflated", views="sr", rgloptions = rgloptions, rglactions = rglactions)
+vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'rh',  'inflated', views=c('sr'), rgloptions = rgloptions, rglactions = rglactions);
 
 # Compare assignments in Yeo7 to Yeo-dev ----------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
@@ -166,6 +173,85 @@ colnames(surf_area) <- c("yeo7", "community", "yeo_dev","comm" )
 longdata <- surf_area %>% select(-comm) %>% melt()
 
 ggplot(data=longdata, aes(x=community, y= value))+geom_bar(stat="identity", aes(fill = variable), position = "dodge")+labs(y="Surface area (mm^2)")+theme(axis.text.x=element_text(angle=90,hjust=1))
+
+# Viz confidence maps for Yeo7 -------------------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
+
+#Read in the 1000subjects ref silhouettes
+silhouette <- readMat(paste0(yeo7_ref_dir,"1000subjects_clusters007_ref.mat"), drop = )
+silhouette_lh <-  silhouette$lh.s #this is in fsaverage5 space, so 10k vertices
+silhouette_rh <-  silhouette$rh.s
+
+#clip values below 0 to be equal to 0
+lower_bound <- ecdf(silhouette_rh)(0)#find the value
+clipped_silhouette_rh <- clip.data(silhouette_rh, lower_bound,0.6)
+lower_bound <- ecdf(silhouette_lh)(0)#find the value
+clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,0.6)
+
+#Visuzalize them
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage5',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("mediumpurple","gray", "white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+#Rewrite these to upsample to fsaverage6 so that they're at the same resolution as yeo dev
+write.fs.curv(paste0(subjects_dir, "fsaverage5/label/lh.silhouette.fsaverage5.curv"), silhouette_lh[,])
+write.fs.curv(paste0(subjects_dir, "fsaverage5/label/rh.silhouette.fsaverage5.curv"), silhouette_rh[,])
+
+#####################
+##### Use the bash script to upsample using mri_surf2surf here #####
+###############
+
+#Then reload them below
+silhouette_lh_fs6 <- read.fs.curv(paste0(subjects_dir, "fsaverage6/label/lh.silhouette.fsaverage6.curv"))
+silhouette_rh_fs6 <- read.fs.curv(paste0(subjects_dir, "fsaverage6/label/rh.silhouette.fsaverage6.curv"))
+
+#clip them
+lower_bound <- ecdf(silhouette_rh_fs6)(0)#find the value
+clipped_silhouette_rh <- clip.data(silhouette_rh_fs6, lower_bound,0.6)
+lower_bound <- ecdf(silhouette_lh_fs6)(0)#find the value
+clipped_silhouette_lh <- clip.data(silhouette_lh_fs6, lower_bound,0.6)
+
+#Visualize them on fsaverage6
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_fsaverage6.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("darkorchid","mediumpurple","gray", "white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+# Viz confidence maps for Yeo dev ------------------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
+
+silhouette_lh <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
+silhouette_rh <-  yeo_dev_partition$rh.s
+
+#clip values below 0 to be equal to 0
+lower_bound <- ecdf(silhouette_rh)(0)#find the value
+clipped_silhouette_rh <- clip.data(silhouette_rh, lower_bound,0.6)
+lower_bound <- ecdf(silhouette_lh)(0)#find the value
+clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,0.6)
+
+#Visuzalize them
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("darkorchid","mediumpurple","gray", "white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+# Overlay confidence for adults and kids ----------------------------------
+silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
+silhouette_rh_dev <-  yeo_dev_partition$rh.s
+
+silhouette_lh_yeo7 <- read.fs.curv(paste0(subjects_dir, "fsaverage6/label/lh.silhouette.fsaverage6.curv"))
+silhouette_rh_yeo7 <- read.fs.curv(paste0(subjects_dir, "fsaverage6/label/rh.silhouette.fsaverage6.curv"))
+
+silhouette_lh_dev_bin <- silhouette_lh_dev < quantile(silhouette_lh_dev, 0.20) #Thresholded at 20% lowest confidence
+silhouette_rh_dev_bin <- silhouette_rh_dev < quantile(silhouette_rh_dev, 0.20)
+silhouette_lh_yeo7_bin <- silhouette_lh_yeo7 < quantile(silhouette_lh_yeo7, 0.20)
+silhouette_rh_yeo7_bin <- silhouette_rh_yeo7 < quantile(silhouette_rh_yeo7, 0.20)
+
+overlap_lh <- as.numeric((silhouette_lh_dev_bin+silhouette_lh_yeo7_bin)==2)
+overlap_rh <- as.numeric((silhouette_rh_dev_bin+silhouette_rh_yeo7_bin)==2)
+
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_overlap_yeo7_yeodev.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated", colormap = colorRampPalette(c("gray", "blue","lightblue", "purple")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+
 
 # Compare assignments in Yeo7 to WSBM -------------------------------------
 subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
