@@ -7,6 +7,9 @@ library(fsbrain)
 library(stringr)
 library(data.table)
 library(freesurferformats)
+library(readr)
+library(tidyr)
+library(ggplot2)
 
 # SETUP -------------------------------------------------------------------
 #CUBIC cluster filepaths, mounted locally
@@ -48,6 +51,10 @@ rgloptions=list("windowRect"=c(50,50,1000,1000));
 #Change x=0, y=0, z=1, maybe rpm
 trace(fsbrain:::brainview.sr, edit=TRUE)
 
+##########################
+####### PLOTTING #########
+##########################
+
 # Plot Yeo7 atlas on brain ---------------------------------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
 
@@ -61,27 +68,6 @@ vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
 vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order', 'rh',  'inflated', views=c('sr'), rgloptions = rgloptions, rglactions = rglactions);
-
-# Plot WSBM consensus partition on brain ----------------------------------
-output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
-rglactions=list("movie"=paste0(output_image_directory,"communities.gif"), "snapshot_png"=paste0(output_image_directory,"communities.png"))
-
-#Create a list from the vector of Schaefer structure names and the labels from WSBM consensus partition
-wsbm_consensus_lh=as.list(setNames(c(0, consensus_iterative_labels[1:200]), schaefer_atlas_region_names_lh))
-wsbm_consensus_rh=as.list(setNames(c(0, consensus_iterative_labels[201:400]), schaefer_atlas_region_names_rh))
-#make colormap of Yeo colors
-yeo_colors=colorRampPalette(c("#78797A", "#7B287E", "#5CA1C8", "#9F5AA4", "#0A9045", "#B6C988", "#EF9C23", "#E34A53"))
-
-rgloptions=list("windowRect"=c(50,50,1000,1000));
-rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
-                             wsbm_consensus_rh, colormap=yeo_colors, "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions)
-
-rgloptions=list("windowRect"=c(50,50,200,200));
-rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
-#need only one hemisphere here
-vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
-                             wsbm_consensus_rh, colormap=yeo_colors,"inflated", views="sr", rgloptions = rgloptions, rglactions = rglactions)
 
 # Plot the Yeo developmental partition on brain ---------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
@@ -102,6 +88,10 @@ vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'both',  'in
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
 vis.subject.annot(subjects_dir, 'fsaverage6', 'yeonets.fsaverage6', 'rh',  'inflated', views=c('sr'), rgloptions = rgloptions, rglactions = rglactions);
+
+####################################
+######## YEO DEV ###################
+####################################
 
 # Compare assignments in Yeo7 to Yeo-dev ----------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
@@ -267,6 +257,67 @@ vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated
 library(igraph)
 compare(cbind(silhouette_lh_dev,silhouette_rh_dev), cbind(silhouette_lh_yeo7, silhouette_rh_yeo7), method = "nmi")
 
+
+# Plot confidence in community assignment by Yeo7 system -------------------------------------
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+
+silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
+silhouette_rh_dev <-  yeo_dev_partition$rh.s
+silhouette_dev <- rbind(silhouette_lh_dev,silhouette_rh_dev)
+yeo7 <- c(yeo7_lh, yeo7_rh)
+data <- data.frame(silhouette_dev, as.character(yeo7))
+data <- data[data$as.character.yeo7 != "0",]#remove the medial wall
+colnames(data) <- c("silhouette", "yeo7")
+
+## Raincloud plot
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+
+sumld<- ddply(data, ~yeo7, summarise, mean = mean(silhouette), median = median(silhouette), lower = lb(silhouette), upper = ub(silhouette))
+
+head(sumld)
+g <- ggplot(data = data, aes(y = silhouette, x = yeo7, fill = yeo7)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = silhouette, color = yeo7), position = position_jitter(width = .15), size = .08, alpha = 0.15) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#C33AF8", "#0A9045", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#C33AF8", "#0A9045", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+
+g
+
+####################################
+############# WSBM #################
+####################################
+# Plot WSBM consensus partition on brain ----------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
+rglactions=list("movie"=paste0(output_image_directory,"communities.gif"), "snapshot_png"=paste0(output_image_directory,"communities.png"))
+
+#Create a list from the vector of Schaefer structure names and the labels from WSBM consensus partition
+wsbm_consensus_lh=as.list(setNames(c(0, consensus_iterative_labels[1:200]), schaefer_atlas_region_names_lh))
+wsbm_consensus_rh=as.list(setNames(c(0, consensus_iterative_labels[201:400]), schaefer_atlas_region_names_rh))
+#make colormap of Yeo colors
+yeo_colors=colorRampPalette(c("#000000", "#7B287E", "#5CA1C8", "#C33AF8", "#0A9045", "#B6C988", "#EF9C23", "#E34A53"))
+
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
+                             wsbm_consensus_rh, colormap=yeo_colors, "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+rgloptions=list("windowRect"=c(50,50,200,200));
+rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
+#need only one hemisphere here
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
+                             wsbm_consensus_rh, colormap=yeo_colors,"inflated", views="sr", rgloptions = rgloptions, rglactions = rglactions)
+
 # Compare assignments in Yeo7 to WSBM -------------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
 yeo_nodes_schaefer400=read.delim('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', header = F, col.names = F)
@@ -324,3 +375,74 @@ colnames(surf_area) <- c("yeo7", "community", "wsbm","comm" )
 longdata <- surf_area %>% select(-comm) %>% melt()
 
 ggplot(data=longdata, aes(x=community, y= value))+geom_bar(stat="identity", aes(fill = variable), position = "dodge")+labs(y="Surface area (mm^2)")+theme(axis.text.x=element_text(angle=90,hjust=1))
+
+#Double-checking the weird large values for Default!
+
+#copy WSBM annotation into local CBIG subjects dir
+get.atlas.region.names("wsbm.consensus.fsaverage6", template_subjects_dir = subjects_dir,template_subject='fsaverage6', hemi="lh");
+subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.consensus.fsaverage6')
+
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_annotation.png"))
+vis.subject.annot(subjects_dir, 'fsaverage6', 'wsbm.consensus.fsaverage6', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+#THESE do look right!
+
+# Areas of inconsistent assignment in WSBM --------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
+subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
+freq=abs(freq-670) #change into the number of non-modal assignments out of 670
+
+#Create a list from the vector of Schaefer structure names and the labels from WSBM consensus partition
+freq_lh=as.list(setNames(c(0, freq[1:200]), schaefer_atlas_region_names_lh))
+freq_rh=as.list(setNames(c(0, freq[201:400]), schaefer_atlas_region_names_rh))
+
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"inconsistent_assignment.png"))
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  freq_lh, 
+                             freq_rh, colormap=colorRampPalette(c("white","gray","gray","gray","mediumpurple","mediumpurple","mediumpurple","darkorchid")), "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+
+# Plot variance in community assignment by Yeo system ------------------------
+yeo_nodes=read.table('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', col.names = "yeo_nodes")
+yeo_nodes <- as.character(yeo_nodes$yeo_nodes)
+#Read in the frequency of ties in the group WSBM partition
+z <- readMat(paste0(wsbm_datadir,"consensus_iter_mode.mat"), drop = )
+freq<- t(z$freq)
+freq_continuous <- abs(freq-670) #change into the number of non-modal assignments out of 670
+data <- data.frame(yeo_nodes,freq_continuous)
+colnames(data) <- c('yeo7', 'freq')
+
+
+se <- function(x){sd(x)/sqrt(length(x))}
+my_dat <- data %>% group_by(yeo7) %>% summarise(my_mean = mean(freq),my_se = se(freq)) #this fails if plyr is loaded!
+
+p<-ggplot(data, aes(x=yeo7, y=freq)) + geom_jitter(position=position_jitter(0.1), cex=1, alpha=0.2) +geom_bar(data=my_dat, aes(y=my_mean,fill=yeo7, 
+    x=yeo7,ymin=my_mean-my_se,ymax=my_mean+my_se), stat="identity", width = 0.75) + geom_errorbar(data=my_dat, aes(y=my_mean,x=yeo7,ymin=my_mean-my_se,ymax=my_mean+my_se), width = 0.25) + theme_classic()
+
+p
+
+# Overlap of variability in WSBM and Yeo Dev ------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
+
+#First relabel Schaefer400 annotation with WSBM frequency of inconsistent assignment in matlab
+#Then import that annotation, compare both vectors in fsaverage6 space as we did before
+#Inconsistent assignment WSBM
+lh_freq <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.freq.fsaverage6' )
+lh_freq <- as.numeric(as.character(lh_freq$label_names))
+rh_freq <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.freq.fsaverage6' )
+rh_freq <- as.numeric(as.character(rh_freq$label_names))
+
+#Confidence for Yeo Dev
+silhouette_lh <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
+silhouette_rh <-  yeo_dev_partition$rh.s
+
+silhouette_lh_dev_bin <- silhouette_lh_dev < quantile(silhouette_lh, 0.20) #Threshold yeo dev silhouette at 20% lowest confidence
+silhouette_rh_dev_bin <- silhouette_rh_dev < quantile(silhouette_rh, 0.20)
+
+#threshold WSBM community assignment above 0
+rh_freq_bin <- rh_freq>0
+lh_freq_bin <- lh_freq>0
+
+overlap_lh <- as.numeric((silhouette_lh_dev_bin+lh_freq_bin)==2)
+overlap_rh <- as.numeric((silhouette_rh_dev_bin+rh_freq_bin)==2)
+
+rglactions=list("snapshot_png"=paste0(output_image_directory,"overlap_yeodev_confidence_inconsistence_wsbm.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated", colormap = colorRampPalette(c("gray", "blue","lightblue", "purple")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)

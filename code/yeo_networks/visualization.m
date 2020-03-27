@@ -91,7 +91,11 @@ yeo_nodes=dlmread('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaef
 outdir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/'
 wsbm_consensus=(fullfile(outdir, 'n670_training_sample_consensus_partitions_yeorelabeled.mat'))
 load(wsbm_consensus)
-values=consensus_iter_mode_yeorelabeled;
+%load WSBM inconsistent assignment labels
+freq=(fullfile(outdir, "consensus_iter_mode.mat"))
+load(freq)
+%values=consensus_iter_mode_yeorelabeled;
+values=abs(freq-670)';
 %split into lh and rh, and add a 0 at the beginning for the medial wall
 %label
 values_lh=vertcat(0,values(1:200));
@@ -121,7 +125,7 @@ end
 %create a new empty struct named copy for the colortable and fill it
 copy = struct();
 copy.numEntries=numel(unique(newlabel)); %num entries=num new labels, plus one for the unknown label needed at the beginning
-copy.orig_tab='wsbm_consensus_community' %name the new colortable
+copy.orig_tab='wsbm_freq' %name the new colortable
 copy.struct_names=cell(numel(unique(newlabel)),1); %%make enough structure names for num of labels
 ranked=sort(unique(newlabel))%rank the values (community assignments) from low to high
 copy.struct_names{1}='Unknown'  %make the first struct_name the empty unknown
@@ -162,7 +166,10 @@ for n=1:(numel(unique(newlabel)));
 end
 
 %write out the annotation file
-filename=fullfile(outdir, 'lh.wsbm.consensus.fsaverage6.annot')
+filename=fullfile(outdir, 'lh.wsbm.freq.fsaverage6.annot')
+write_annotation(filename, num_vertices, newlabel, copy)
+outdir_2='/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/fsaverage6/label/'
+filename=fullfile(outdir_2, 'lh.wsbm.freq.fsaverage6.annot')
 write_annotation(filename, num_vertices, newlabel, copy)
 
 %% RH ANNOTATION FILE
@@ -189,7 +196,7 @@ end
 %create a new empty struct named copy for the colortable and fill it
 copy = struct();
 copy.numEntries=numel(unique(newlabel)); %num entries=num new labels, plus one for the unknown label needed at the beginning
-copy.orig_tab='wsbm_consensus_community' %name the new colortable
+copy.orig_tab='wsbm_freq_community' %name the new colortable
 copy.struct_names=cell(numel(unique(newlabel)),1); %%make enough structure names for num of labels
 ranked=sort(unique(newlabel))%rank the values (community assignments) from low to high
 copy.struct_names{1}='Unknown'  %make the first struct_name the empty unknown
@@ -230,5 +237,8 @@ for n=1:(numel(unique(newlabel)));
 end
 
 %write out the annotation file
-filename=fullfile(outdir, 'rh.wsbm.consensus.fsaverage6.annot')
+filename=fullfile(outdir, 'rh.wsbm.freq.fsaverage6.annot')
+write_annotation(filename, num_vertices, newlabel, copy)
+outdir_2='/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/fsaverage6/label/'
+filename=fullfile(outdir_2, 'rh.wsbm.freq.fsaverage6.annot')
 write_annotation(filename, num_vertices, newlabel, copy)
