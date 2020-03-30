@@ -176,9 +176,7 @@ subjlist=readtable(fullfile(listdir,'n670_filtered_runs_site16_postprocess.csv')
 yeo_nodes=dlmread('/cbica/projects/spatial_topography/tools/parcellations/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
 
 subjlist=subjlist.id;
-%preallocate variables
-deviation_edge_weights_yeo=zeros(size(subjlist,1),1);
-modul_yeo=zeros(size(subjlist,1),1);
+
 %clear variables that might have overlapped with previous subject list
 clear modul
 clear avgweight
@@ -192,6 +190,10 @@ clear sub_partcoef_neg_yeo
 clear modul_yeo
 clear yeo_connectivity
 clear system_connectivity_all
+
+%preallocate variables
+deviation_edge_weights_yeo=zeros(size(subjlist,1),1);
+modul_yeo=zeros(size(subjlist,1),1);
 
 %load in the FC matrix for each subject
 for n=1:size(subjlist,1)
@@ -253,7 +255,7 @@ for n=1:size(subjlist,1)
         % [M Q]=community_louvain(subfcmat, [], double(yeo_nodes), 'negative_asym'); %this optimizes modularity, which is not what we ant.
         modul_yeo(n,1)=Q;
     catch
-    fprintf('Cant read sub %s, skipped. \n', sub{1});
+    fprintf('Cant read sub %s, skipped. \n', sub);
     end
 end
 %save outfile

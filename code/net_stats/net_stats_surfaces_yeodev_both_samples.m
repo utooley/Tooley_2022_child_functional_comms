@@ -24,7 +24,7 @@ clear system_conn
 clear wsbm_connectivity
 clear system_connectivity_all
 
-nets_dir='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries'
+nets_dir='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/'
 data_dir='/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek'
 subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/yeo_networks'
 
@@ -36,7 +36,7 @@ for n=1:size(subjlist,1)
         %% Load FC matrix
         fcfile=fullfile(z_avg_outdir,strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
         
-        yeo_dev = fullfile(nets_dir,'lh.yeonets.fsaverage6.annot')
+        yeo_dev = fullfile(nets_dir,'lh.yeodev.fsaverage6.annot')
         subjlist1 = fullfile(subjlist_dir, 'n3_site16_tworunsonly_volume_filepaths.txt')
         motionlist = fullfile(subjlist_dir, 'n3_site16_tworunsonly_motion_filepaths.txt')
 
