@@ -173,7 +173,7 @@ addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/BCT/'))
 
 subjlist=readtable(fullfile(listdir,'n670_filtered_runs_site16_postprocess.csv')) %the first two runs here are those that were input into WSBM before!
 %read in the yeo partition
-yeo_nodes=dlmread('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
+yeo_nodes=dlmread('/cbica/projects/spatial_topography/tools/parcellations/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
 
 subjlist=subjlist.id;
 %preallocate variables
@@ -197,7 +197,7 @@ clear system_connectivity_all
 for n=1:size(subjlist,1)
     sub=subjlist{n,:}
     try 
-        %% Load FC matrix
+        %% LLLoad FC matrix
         fcfile=fullfile(z_avg_outdir,strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
         %parcel 52 is already gone
         subfcmat = load(fcfile);
