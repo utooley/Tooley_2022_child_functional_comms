@@ -266,7 +266,7 @@ export(outfile,'File',fullfile(outdir,'n670_training_sample_schaefer400_yeo7_net
 header={'ID', 'avgweight', 'system_segreg_yeo', 'mean_within_sys_yeo', 'mean_between_sys_yeo', 'deviation_edge_weights_yeo', 'sub_partcoef_pos_yeo', 'sub_partcoef_neg_yeo', 'modul_yeo', 'sys1to1','sys1to2','sys1to3','sys1to4','sys1to5','sys1to6','sys1to7','sys2to1','sys2to2','sys2to3','sys2to4','sys2to5','sys2to6','sys2to7','sys3to1','sys3to2','sys3to3','sys3to4','sys3to5','sys3to6','sys3to7','sys4to1','sys4to2','sys4to3','sys4to4','sys4to5','sys4to6','sys4to7','sys5to1','sys5to2','sys5to3','sys5to4','sys5to5','sys5to6','sys5to7','sys6to1','sys6to2','sys6to3','sys6to4','sys6to5','sys6to6','sys6to7','sys7to1','sys7to2','sys7to3','sys7to4','sys7to5','sys7to6','sys7to7'}
 
 outfile=table(subjlist, avgweight, system_segreg_yeo, mean_within_sys_yeo, mean_between_sys_yeo, deviation_edge_weights_yeo, sub_partcoef_pos_yeo, sub_partcoef_neg_yeo, modul_yeo, yeo_connectivity)
-outfile2=splitvars(outfile, 'system_conn')
+outfile2=splitvars(outfile, 'yeo_connectivity')
 outfile2.Properties.VariableNames=header
 
 save(fullfile(outdir, 'n670_training_sample_schaefer400_yeo7_network_stats.csv'), 'outfile2')

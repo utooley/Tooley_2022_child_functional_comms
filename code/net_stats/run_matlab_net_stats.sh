@@ -10,4 +10,4 @@ module unload matlab/R2014B
 module load matlab/R2018A
 
 code_dir='/cbica/projects/spatial_topography/code/net_stats'
-matlab -nodisplay -r "cd ${code_dir}, run('net_stats_schaefer400_yeo7_both_samples.m'); exit"
+matlab -nodisplay -r "cd ${code_dir}, run('net_stats_schaefer400_wsbm_both_samples.m'); exit"
