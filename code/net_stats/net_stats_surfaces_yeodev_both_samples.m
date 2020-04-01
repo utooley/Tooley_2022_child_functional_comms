@@ -54,8 +54,8 @@ for n=1:size(subjlist,1)
 
 %for each subject, write their left and right hemispheres into two text
 %files using bash script 
-surflist1=fullfile(list_dir, 'subjects', strcat(sub, '_fullpaths_surf2surf_lh.txt'))
-surflist2=fullfile(list_dir, 'subjects', strcat(sub, '_fullpaths_surf2surf_rh.txt'))
+surflist1=fullfile(listdir, 'yeo_networks','subjects', strcat(sub, '_fullpaths_surf2surf_lh.txt'))
+surflist2=fullfile(listdir, 'yeo_networks','subjects', strcat(sub, '_fullpaths_surf2surf_rh.txt'))
 
 %then use this to compute the full surface 80k x 80k correlation for that subject
 
