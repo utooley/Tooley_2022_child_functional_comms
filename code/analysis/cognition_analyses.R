@@ -8,12 +8,15 @@ library(mgcv)
 library(RLRsim)
 library(lm.beta)
 library(visreg)
+library(ggplot2)
+library(data.table)
 
 # Load data ---------------------------------------------------------------
 data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
 output_data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
 subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/'
 net_data_dir='/cbica/projects/spatial_topography/data/imageData/net_stats/'
+raw_data_dir='/data/jux/mackey_group/public_data/ABCD/'
 sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"), stringsAsFactors = F)# change strings as factors = FALSE next time
 sites = sites[-1,]
 sites = droplevels(sites)
@@ -68,9 +71,25 @@ net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n670_training_sample_sch
 net_stats_schaeferwsbm <- read.csv(paste0(net_data_dir,"n670_site16_training_sample_schaefer400_wsbm_network_stats.csv"))
 #From fsaverage6-Yeo dev
 
-# Data cleaning -----------------------------------------------------------
+##need to get XCP mean FD and # of outliers and control for that
+runs <- read.csv(paste0(subjlist_dir,'parcellation/n670_filtered_runs_site16_postprocess.csv'))
+runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
+runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
+#read in the list of runs that were used and merge it with xcp qa vars
+qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/XCP_QAVARS_with_nVols.csv"))
+qa_vars <- rename(qa_vars, ID=id0, run=id1)
+qa <- left_join(runs, qa_vars, by=c("ID", "run"))
 
-#Only baseline visits
+# Data cleaning -----------------------------------------------------------
+#summarize motion and merge in
+#make summary variables of volumes and censored volumes
+qa <- qa %>% group_by(ID) %>% mutate(totalnVolCensored=sum(nVolCensored), totalSizet=sum(nVols)) %>% ungroup()
+
+qa <- qa %>% mutate(perc_vols=nVols/totalSizet, relMeanRMSMotion_weight=relMeanRMSMotion*perc_vols, pctSpikesFD_weight=pctSpikesFD*perc_vols) %>% group_by(ID) %>% 
+  mutate(fd_mean_avg=sum(relMeanRMSMotion_weight), pctVolsCensored=(totalnVolCensored/totalSizet), pctSpikesFD_avg=sum(pctSpikesFD_weight))
+#average motion across the two runs, weighted by the length of each run as a percentage of the total, same for percent spikes FD.
+
+#Only baseline visits from cognition
 main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site16") #filter out only the baseline visits
 #for site 16 only
 #subjlist1 <- read.table(paste0(subjlist_dir, "/n670_subjects_only_filtered_runs_site16_postprocess.txt"), col.names = c("subjectid"))
@@ -88,21 +107,38 @@ main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
 #recode income
 main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
 
+
+# Plot data descriptives --------------------------------------------------
+measures=select(main_schaeferyeo7,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
+par(mfrow=c(4,3))
+i=1
+for (meas in measures){
+  name=colnames(measures)[i]
+  hist(meas, main=name, col = "lightblue") #hist of measure
+  i=i+1
+  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
+}
+
 # WM - List Sorting -------------------------------------------------------
-#Schaefer400-Yeo7
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+#Schaefer400-Yeo7
+for (meas in measures){
+  print(meas)
 for (net in nets){
   name<-paste0("lm_wm_ls_",net)
   #formula<-formula(paste0(net, '~age_scan*ses_composite_med+male+fd_mean+avgweight+pctSpikesFD+size_t'))
   #need to get mean fd and avgweight?
-  formula<-formula(paste0('nihtbx_list_uncorrected~age+gender+', net))
+  formula<-formula(paste0(meas,'~age+gender+', net))
   assign(name, lm(formula, data=main_schaeferyeo7))
   print(summary(get(name)))
   print(lm.beta(get(name)))
   name<-paste0("gam_wm_ls_",net)
-  gamformula<-formula(paste0('nihtbx_list_uncorrected~age+gender+s(', net,')'))
+  gamformula<-formula(paste0(meas,'~age+gender+s(', net,')'))
   assign(name, gam(gamformula, data=main_schaeferyeo7, REML=TRUE))
   print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7, REML=TRUE)$lme))
+}
 }
 #
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys4to7), data=main_schaeferyeo7, REML=TRUE)$lme)
@@ -115,19 +151,21 @@ BIC(lm_wm_ls_sys6to6)
 AIC(lm_wm_ls_sys6to6)
 
 #Schaefer400-WSBM
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
+for (meas in measures){
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
 for (net in nets){
   name<-paste0("lm_wm_ls_",net)
-  #formula<-formula(paste0(net, '~age_scan*ses_composite_med+male+fd_mean+avgweight+pctSpikesFD+size_t'))
   #need to get mean fd and avgweight?
-  formula<-formula(paste0('pnihtbx_list_uncorrected~age+gender+', net))
+  formula<-formula(paste0(meas,'~age+gender+', net))
   assign(name, lm(formula, data=main_schaeferwsbm))
   print(summary(get(name)))
   print(lm.beta(get(name)))
   name<-paste0("gam_wm_ls_",net)
-  gamformula<-formula(paste0('nihtbx_list_uncorrected~age+gender+s(', net,')'))
+  gamformula<-formula(paste0(meas,'~age+gender+s(', net,')'))
   assign(name, gam(gamformula, data=main_schaeferwsbm, REML=TRUE))
   print(exactRLRT(gamm(gamformula, data=main_schaeferwsbm, REML=TRUE)$lme))
+}
 }
 #
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys4to7), data=main_schaeferwsbm, REML=TRUE)$lme)
@@ -144,8 +182,70 @@ AIC(lm_wm_ls_sys6to6)
 WAITING!
   
 # TEST SAMPLE -------------------------------------------------------------
+#load data
+#Get network connectivity data
+#From Schaefer400-Yeo7
+net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n546_test_sample_schaefer400_yeo7_network_stats.csv"))
+#From Schaefer400-WSBM
+net_stats_schaeferwsbm <- read.csv(paste0(net_data_dir,"n546_site14site20_test_sample_schaefer400_wsbm_network_stats.csv"))
+#From fsaverage6-Yeo dev
 
-#for site 20 and 14
-#subjlist2 <- read.table(paste0(subjlist_dir, "site14site20/n611_release2_site14site20_0.2mm.txt"), col.names = c("subjectid"))
-#subjlist2$subjectid <- str_remove(subjlist2$subjectid, "sub-")
-#wholesubjectlist <- rbind(subjlist1, subjlist2)
+#remake main
+main<- left_join(sites,socio, by=c("ID", "eventname"))
+main <- left_join(main, income, by=c("ID", "eventname"))
+main <- left_join(main, nihtbx, by=c("ID", "eventname"))
+main <- left_join(main, wiscv, by=c("ID", "eventname"))
+main <- left_join(main, taskfmri, by=c("ID", "eventname"))
+# Data cleaning -----------------------------------------------------------
+
+#Only baseline visits from sites 14 and 20
+main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site20"|site_id_l=="site14") #filter out only the baseline visits
+main$ID <- str_remove(main$ID, "_") #subjectid has a _ in it after NDAR in the NDAR data, doesn't match subject list
+main$ID <- paste0("sub-",main$ID)
+#make age numeric
+main$age <- as.numeric(main$interview_age.x)/12
+#make sex a factor
+main$gender <- as.factor(main$gender.x)
+
+main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
+main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
+
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
+nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+#Schaefer400-Yeo7
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    name<-paste0("lm_wm_ls_",net)
+    #formula<-formula(paste0(net, '~age_scan*ses_composite_med+male+fd_mean+avgweight+pctSpikesFD+size_t'))
+    #need to get mean fd and avgweight?
+    formula<-formula(paste0(meas,'~age+gender+', net))
+    assign(name, lm(formula, data=main_schaeferyeo7))
+    print(summary(get(name)))
+    print(lm.beta(get(name)))
+    name<-paste0("gam_wm_ls_",net)
+    gamformula<-formula(paste0(meas,'~age+gender+s(', net,')'))
+    assign(name, gam(gamformula, data=main_schaeferyeo7, REML=TRUE))
+    print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7, REML=TRUE)$lme))
+  }
+}
+
+#Schaefer400-WSBM
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
+for (meas in measures){
+  nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_wm_ls_",net)
+    #need to get mean fd and avgweight?
+    formula<-formula(paste0(net,'~age+gender+avgweight+', meas))
+    assign(name, lm(formula, data=main_schaeferwsbm))
+    print(summary(get(name)))
+    print(lm.beta(get(name)))
+    name<-paste0("gam_wm_ls_",net)
+    gamformula<-formula(paste0(net,'~s(age)+gender+avgweight+', meas))
+    assign(name, gam(gamformula, data=main_schaeferwsbm, REML=TRUE))
+    print(exactRLRT(gamm(gamformula, data=main_schaeferwsbm, REML=TRUE)$lme))
+  }
+}
+
