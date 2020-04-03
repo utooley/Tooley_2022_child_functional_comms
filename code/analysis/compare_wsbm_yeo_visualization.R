@@ -337,7 +337,7 @@ rglactions=list("movie"=paste0(output_image_directory,"communities.gif"), "snaps
 wsbm_consensus_lh=as.list(setNames(c(0, consensus_iterative_labels[1:200]), schaefer_atlas_region_names_lh))
 wsbm_consensus_rh=as.list(setNames(c(0, consensus_iterative_labels[201:400]), schaefer_atlas_region_names_rh))
 #make colormap of Yeo colors
-yeo_colors=colorRampPalette(c("#000000", "#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#dcf8a4", "#EF9C23", "#E34A53")) #these are correct!
+yeo_colors=colorRampPalette(c("#000000", "#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#dcf8a4", "#EF9C23", "#E34A53")) #these are corr
 barplot(1:8, col=yeo_colors(8))
 
 rgloptions=list("windowRect"=c(50,50,1000,1000));

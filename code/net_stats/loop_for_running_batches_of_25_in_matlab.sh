@@ -11,5 +11,5 @@ end=$(expr 25 + ${x} \* 25)
 for i in "${myArray[@]:$begin:$end}";
 do
 echo $i
-#qsub ${code_dir}/run_matlab_net_stats.sh ${subject}
+qsub ${code_dir}/run_matlab_net_stats.sh ${i}
 done
