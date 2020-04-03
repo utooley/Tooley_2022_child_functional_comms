@@ -132,6 +132,38 @@ library(igraph)
 compare(cbind(yeo_dev_lh,yeo_dev_rh), cbind(yeo7_lh, yeo7_rh), method = "adjusted.rand") #these give the same values as zrand in matlab, but there's no zrand.
 compare(yeo_dev_rh, yeo7_rh, method = "nmi")
 
+# Examine the switches in community assignment from Yeo7 to Yeo dev ----------------------------
+#Where do they differ?
+compare_vector <- paste0(as.character(yeo7_lh),as.character(yeo_dev_lh))
+table(compare_vector)
+remove=c("00","11","22","33","44","55","66","77") #remove the same assignments and look at what is most common
+table(compare_vector[!compare_vector %in% remove])
+#75 24 67 46 are the most common reassignments from Yeo to Yeo dev on lh and rh, so assign these their own categories
+#RH
+compare_vector2 <- paste0(as.character(yeo7_rh),as.character(yeo_dev_rh))
+table(compare_vector2)
+remove=c("00","11","22","33","44","55","66","77") #remove the same assignments and look at what is most common
+table(compare_vector2[!compare_vector %in% remove])
+brain <- c(compare_vector,compare_vector2) #whole brain
+switches <- rep(5,length(brain)) #create a new vector to compare to
+switches[brain=="75"] <- 1 #7 to 5
+switches[brain=="24"] <- 2 #2 to 4
+switches[brain=="67"] <- 3 #6 to 7
+switches[brain=="46"] <- 4 #4 to 6
+switches[brain %in% remove ] <- 0
+switches_lh <- switches[1:40962]
+switches_rh <- switches[40963:81924]
+
+#Make a palette for this
+switch_colors=colorRampPalette(c("#D3D3D3", "#FF999A", "#99F0FF","#C381FF", "#FF4312", "#cec2b7")) #gray for 0(same),  ,tan for other switch
+barplot(1:6,col=switch_colors(6))
+
+#Plot this vector of switches on fsaverage6 surface
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assignment.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',switches_lh, switches_rh, 
+                    "inflated", colormap= switch_colors, views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
 # Number of vertices in Yeo7 vs Yeo-dev by community ----------------------------
 #Sum vertices in each hemisphere, these two have the same total # of vertices, in fsaverage6 space
 yeo7 <- table(yeo7_lh) + table(yeo7_rh)
@@ -305,7 +337,8 @@ rglactions=list("movie"=paste0(output_image_directory,"communities.gif"), "snaps
 wsbm_consensus_lh=as.list(setNames(c(0, consensus_iterative_labels[1:200]), schaefer_atlas_region_names_lh))
 wsbm_consensus_rh=as.list(setNames(c(0, consensus_iterative_labels[201:400]), schaefer_atlas_region_names_rh))
 #make colormap of Yeo colors
-yeo_colors=colorRampPalette(c("#000000", "#7B287E", "#5CA1C8", "#C33AF8", "#0A9045", "#B6C988", "#EF9C23", "#E34A53"))
+yeo_colors=colorRampPalette(c("#000000", "#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#dcf8a4", "#EF9C23", "#E34A53")) #these are correct!
+barplot(1:8, col=yeo_colors(8))
 
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
