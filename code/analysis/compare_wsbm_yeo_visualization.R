@@ -10,6 +10,8 @@ library(freesurferformats)
 library(readr)
 library(tidyr)
 library(ggplot2)
+#turn off scientific notation
+options(scipen = 9)
 
 # SETUP -------------------------------------------------------------------
 #CUBIC cluster filepaths, mounted locally
@@ -127,10 +129,27 @@ perc_vertices_unmatched=(sum(compare_yeo7_dev_1_is_same_lh==0)+sum(compare_yeo7_
 #actually, ignore medial wall in calculating percentage of vertices, which is 3544 + 3534 = 7078 vertices
 perc_vertices_unmatched=(sum(compare_yeo7_dev_1_is_same_lh==0)+sum(compare_yeo7_dev_1_is_same_rh==0))/((40962*2)-7078) #39.5 of vertices unmatched
 
-## ZRAND or NMI
+# Partition overlap statistics Adjusted-Rand and NMI ------------------------------
 library(igraph)
-compare(cbind(yeo_dev_lh,yeo_dev_rh), cbind(yeo7_lh, yeo7_rh), method = "adjusted.rand") #these give the same values as zrand in matlab, but there's no zrand.
-compare(yeo_dev_rh, yeo7_rh, method = "nmi")
+library(aricode)
+
+## ZRAND or NMI
+yeo_dev_full <- c(yeo_dev_lh,yeo_dev_rh)
+yeo_full <- c(yeo7_lh, yeo7_rh)
+compare(yeo_dev_full, yeo_full, method = "adjusted.rand") #these give the same values as zrand in matlab, but there's no zrand.
+compare(yeo_dev_full, yeo_full, method = "nmi")
+#use aricode 
+NMI_value <- clustComp(yeo_dev_full, yeo_full)$NMI
+
+#permutation testing
+distr <- vector()
+for (i in 1:100){
+  shuffled <- sample(yeo_dev_full, replace = FALSE)
+  distr[i] <- clustComp(shuffled, yeo_full)$NID
+}
+hist(distr)
+abline(v =NMI_value)
+sum(abs(distr) > NMI_value)/1000  # no values this high
 
 # Examine the switches in community assignment from Yeo7 to Yeo dev ----------------------------
 #Where do they differ?
@@ -145,6 +164,7 @@ table(compare_vector2)
 remove=c("00","11","22","33","44","55","66","77") #remove the same assignments and look at what is most common
 table(compare_vector2[!compare_vector %in% remove])
 brain <- c(compare_vector,compare_vector2) #whole brain
+perc <- table(brain[!brain %in% remove])/29588 #perc of total switches, total vertices that switched is 29588
 switches <- rep(5,length(brain)) #create a new vector to compare to
 switches[brain=="75"] <- 1 #7 to 5
 switches[brain=="24"] <- 2 #2 to 4
@@ -205,7 +225,8 @@ surf_area <- data.frame(yeo7_surf_area, yeodev_surf_area )
 colnames(surf_area) <- c("yeo7", "community", "yeo_dev","comm" )
 longdata <- surf_area %>% select(-comm) %>% melt()
 
-ggplot(data=longdata, aes(x=community, y= value))+geom_bar(stat="identity", aes(fill = variable), position = "dodge")+labs(y="Surface area (mm^2)")+theme(axis.text.x=element_text(angle=90,hjust=1))
+ggplot(data=longdata, aes(x=community, y= value))+geom_bar(stat="identity", aes(fill = variable), position = "dodge")+
+  labs(y="Surface area (mm^2)")+ ylim(0, 47000) + theme(axis.text.x=element_text(angle=90,hjust=1))
 
 # Viz confidence maps for Yeo7 -------------------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
@@ -353,7 +374,7 @@ vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcel
 
 # Compare assignments in Yeo7 to WSBM -------------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
-yeo_nodes_schaefer400=read.delim('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', header = F, col.names = F)
+yeo_nodes_schaefer400=as.numeric(read.delim('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', header = F))
 subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
 
 #Where do they differ?
@@ -378,6 +399,59 @@ perc_parcels_unmatched=(sum(comparison_wsbm_yeo==0))/(400) #33 % of parcels don'
 library(igraph)
 compare(yeo_nodes_schaefer400[,1], consensus_iterative_labels, method = "adjusted.rand")
 compare(yeo_nodes_schaefer400[,1], consensus_iterative_labels, method = "nmi") #NMI is lower than Yeo7-Yeo dev, but adjusted Rand is higher than Yeo7-Yeo dev
+
+# Partition overlap statistics Adjusted-Rand and NMI ------------------------------
+library(igraph)
+library(aricode)
+
+## ZRAND or NMI
+compare(consensus_iterative_labels, yeo_nodes_schaefer400$V1, method = "adjusted.rand") #these give the same values as zrand in matlab, but there's no zrand.
+compare(consensus_iterative_labels, yeo_nodes_schaefer400$V1, method = "nmi")
+#use aricode 
+clustComp(consensus_iterative_labels[,1], yeo_nodes_schaefer400$V1)
+NMI_value <- clustComp(consensus_iterative_labels[,1], yeo_nodes_schaefer400$V1)$NMI
+
+#permutation testing
+distr <- vector()
+for (i in 1:1000){
+  shuffled <- sample(consensus_iterative_labels[,1], replace = FALSE)
+  distr[i] <- clustComp(shuffled, yeo_nodes_schaefer400$V1)$NMI
+}
+hist(distr)
+abline(v =NMI_value)
+sum(abs(distr) > NMI_value)/100  # no values this high
+
+# Examine the switches in community assignment from Yeo7 to WSBM ----------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
+#Where do they differ?
+brain <- paste0(as.character(yeo_nodes_schaefer400$V1),as.character(consensus_iterative_labels))
+table(brain)
+remove=c("00","11","22","33","44","55","66","77") #remove the same assignments and look at what is most common
+table(brain[!brain %in% remove]) #132 parcels changed assignment
+#42 31 65 57 are the most common reassignments from Yeo to Yeo dev on lh and rh, so assign these their own categories
+perc <- table(brain[!brain %in% remove])/132 #perc of total switches, total vertices that switched is 29588
+switches <- rep(5,length(brain)) #create a new vector to compare to
+switches[brain=="42"] <- 1 #4 to 2
+switches[brain=="31"] <- 2 #3 to 1
+switches[brain=="65"] <- 3 #6 to 5
+switches[brain=="57"] <- 4 #5 to 7
+switches[brain %in% remove ] <- 0
+#Create a list from the vector of Schaefer structure names and the labels from WSBM consensus partition
+switches_lh=as.list(setNames(c(0, switches[1:200]), schaefer_atlas_region_names_lh))
+switches_rh =as.list(setNames(c(0, switches[201:400]), schaefer_atlas_region_names_rh))
+
+switches_lh <- switches[1:200]
+switches_rh <- switches[201:400]
+
+#Make a palette for this
+switch_colors=colorRampPalette(c("#D3D3D3", "#8659FF", "#69FFA7","#FDD5A3", "#FFB3C0", "#cec2b7")) #gray for 0(same),  ,tan for other switch
+barplot(1:6,col=switch_colors(6))
+
+#Plot this vector of switches on fsaverage6 surface
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assignment.png"))
+vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  switches_lh, 
+                             switches_rh, colormap=switch_colors, "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
 # Surface area in WSBM vs. Yeo7 by community ----------------------------
 #YEO7
