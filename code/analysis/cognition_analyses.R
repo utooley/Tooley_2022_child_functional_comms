@@ -10,6 +10,7 @@ library(lm.beta)
 library(visreg)
 library(ggplot2)
 library(data.table)
+library(vioplot)
 
 # Load data ---------------------------------------------------------------
 data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
@@ -86,8 +87,9 @@ qa <- left_join(runs, qa_vars, by=c("ID", "run"))
 qa <- qa %>% group_by(ID) %>% mutate(totalnVolCensored=sum(nVolCensored), totalSizet=sum(nVols)) %>% ungroup()
 
 qa <- qa %>% mutate(perc_vols=nVols/totalSizet, relMeanRMSMotion_weight=relMeanRMSMotion*perc_vols, pctSpikesFD_weight=pctSpikesFD*perc_vols) %>% group_by(ID) %>% 
-  mutate(fd_mean_avg=sum(relMeanRMSMotion_weight), pctVolsCensored=(totalnVolCensored/totalSizet), pctSpikesFD_avg=sum(pctSpikesFD_weight))
-#average motion across the two runs, weighted by the length of each run as a percentage of the total, same for percent spikes FD.
+  mutate(fd_mean_avg=sum(relMeanRMSMotion_weight), pctVolsCensored=(totalnVolCensored/totalSizet), pctSpikesFD_avg=sum(pctSpikesFD_weight)) %>% select(fd_mean_avg, pctVolsCensored, pctSpikesFD_avg, totalSizet)
+#average motion across the two runs, weighted by the length of each run as a percentage of the total, same for percent spikes FD. select only the averaged variables
+qa <- qa[!duplicated(qa$ID), ]
 
 #Only baseline visits from cognition
 main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site16") #filter out only the baseline visits
@@ -102,7 +104,9 @@ main$age <- as.numeric(main$interview_age.x)/12
 main$gender <- as.factor(main$gender.x)
 
 main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
+main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
 main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
+main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
 
 #recode income
 main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
@@ -120,22 +124,21 @@ for (meas in measures){
   p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
 }
 
-# WM - List Sorting -------------------------------------------------------
+# Cognitive measures-------------------------------------------------------
 measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)
 for (net in nets){
-  name<-paste0("lm_wm_ls_",net)
-  #formula<-formula(paste0(net, '~age_scan*ses_composite_med+male+fd_mean+avgweight+pctSpikesFD+size_t'))
-  #need to get mean fd and avgweight?
-  formula<-formula(paste0(meas,'~age+gender+', net))
+  print(net)
+  name<-paste0("lm_", meas,"_",net)
+  formula<-formula(paste0(net,'~age+gender+', meas))
   assign(name, lm(formula, data=main_schaeferyeo7))
   print(summary(get(name)))
   print(lm.beta(get(name)))
   name<-paste0("gam_wm_ls_",net)
-  gamformula<-formula(paste0(meas,'~age+gender+s(', net,')'))
+  gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
   assign(name, gam(gamformula, data=main_schaeferyeo7, REML=TRUE))
   print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7, REML=TRUE)$lme))
 }
@@ -143,7 +146,7 @@ for (net in nets){
 #
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys4to7), data=main_schaeferyeo7, REML=TRUE)$lme)
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys6to7), data=main_schaeferyeo7, REML=TRUE)$lme)
-visreg(gam_wm_ls_sys6to7)#this does not look believably non-linear
+visreg(lm_nihtbx_list_uncorrected_sys6to6)#this does not look believably non-linear
 
 #FPN-FPN predicts WM, with or without avgweight, but AIC and BIC are lower without avg weight
 #Model selection
@@ -152,17 +155,18 @@ AIC(lm_wm_ls_sys6to6)
 
 #Schaefer400-WSBM
 measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
-for (meas in measures){
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+for (meas in measures){
+print(meas)
 for (net in nets){
-  name<-paste0("lm_wm_ls_",net)
-  #need to get mean fd and avgweight?
-  formula<-formula(paste0(meas,'~age+gender+', net))
+  print(net)
+  name<-paste0("lm_", meas,"_",net)
+  formula<-formula(paste0(net,'~age+gender+', meas))
   assign(name, lm(formula, data=main_schaeferwsbm))
   print(summary(get(name)))
   print(lm.beta(get(name)))
   name<-paste0("gam_wm_ls_",net)
-  gamformula<-formula(paste0(meas,'~age+gender+s(', net,')'))
+  gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
   assign(name, gam(gamformula, data=main_schaeferwsbm, REML=TRUE))
   print(exactRLRT(gamm(gamformula, data=main_schaeferwsbm, REML=TRUE)$lme))
 }
@@ -170,7 +174,7 @@ for (net in nets){
 #
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys4to7), data=main_schaeferwsbm, REML=TRUE)$lme)
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys6to7), data=main_schaeferwsbm, REML=TRUE)$lme)
-visreg(gam_wm_ls_sys4to7)#this does not look believably non-linear
+visreg(lm_nihtbx_list_uncorrected_sys6to6)#this does not look believably non-linear
 
 #No prediction
 
@@ -181,8 +185,11 @@ AIC(lm_wm_ls_sys6to6)
 #From fsaverage6-Yeo dev
 WAITING!
   
-# TEST SAMPLE -------------------------------------------------------------
-#load data
+  
+#####################################
+########### TEST SAMPLE #########
+#####################################
+subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/'
 #Get network connectivity data
 #From Schaefer400-Yeo7
 net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n546_test_sample_schaefer400_yeo7_network_stats.csv"))
@@ -196,7 +203,25 @@ main <- left_join(main, income, by=c("ID", "eventname"))
 main <- left_join(main, nihtbx, by=c("ID", "eventname"))
 main <- left_join(main, wiscv, by=c("ID", "eventname"))
 main <- left_join(main, taskfmri, by=c("ID", "eventname"))
+
+##need to get XCP mean FD and # of outliers and control for that
+runs <- read.csv(paste0(subjlist_dir,'n546_filtered_runs_site14site20_postprocess.csv'))
+runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
+runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
+#read in the list of runs that were used and merge it with xcp qa vars
+qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/XCP_QAVARS_with_nVols.csv"))
+qa_vars <- rename(qa_vars, ID=id0, run=id1)
+qa <- left_join(runs, qa_vars, by=c("ID", "run"))
+
 # Data cleaning -----------------------------------------------------------
+#summarize motion and merge in
+#make summary variables of volumes and censored volumes
+qa <- qa %>% group_by(ID) %>% mutate(totalnVolCensored=sum(nVolCensored), totalSizet=sum(nVols)) %>% ungroup()
+
+qa <- qa %>% mutate(perc_vols=nVols/totalSizet, relMeanRMSMotion_weight=relMeanRMSMotion*perc_vols, pctSpikesFD_weight=pctSpikesFD*perc_vols) %>% group_by(ID) %>% 
+  mutate(fd_mean_avg=sum(relMeanRMSMotion_weight), pctVolsCensored=(totalnVolCensored/totalSizet), pctSpikesFD_avg=sum(pctSpikesFD_weight)) %>% select(fd_mean_avg, pctVolsCensored, pctSpikesFD_avg, totalSizet)
+#average motion across the two runs, weighted by the length of each run as a percentage of the total, same for percent spikes FD. select only the averaged variables
+qa <- qa[!duplicated(qa$ID), ]
 
 #Only baseline visits from sites 14 and 20
 main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site20"|site_id_l=="site14") #filter out only the baseline visits
@@ -208,23 +233,37 @@ main$age <- as.numeric(main$interview_age.x)/12
 main$gender <- as.factor(main$gender.x)
 
 main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
+main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
 main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
+main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
 
+# Plot data descriptives --------------------------------------------------
+measures=select(main_schaeferyeo7,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
+par(mfrow=c(4,3))
+i=1
+for (meas in measures){
+  name=colnames(measures)[i]
+  hist(meas, main=name, col = "lightblue") #hist of measure
+  i=i+1
+  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
+}
+
+# Cognitive measures-------------------------------------------------------
 measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)
   for (net in nets){
-    name<-paste0("lm_wm_ls_",net)
-    #formula<-formula(paste0(net, '~age_scan*ses_composite_med+male+fd_mean+avgweight+pctSpikesFD+size_t'))
-    #need to get mean fd and avgweight?
-    formula<-formula(paste0(meas,'~age+gender+', net))
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
     assign(name, lm(formula, data=main_schaeferyeo7))
     print(summary(get(name)))
     print(lm.beta(get(name)))
     name<-paste0("gam_wm_ls_",net)
-    gamformula<-formula(paste0(meas,'~age+gender+s(', net,')'))
+    gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
     assign(name, gam(gamformula, data=main_schaeferyeo7, REML=TRUE))
     print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7, REML=TRUE)$lme))
   }
@@ -236,14 +275,13 @@ for (meas in measures){
   nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
   for (net in nets){
     print(net)
-    name<-paste0("lm_wm_ls_",net)
-    #need to get mean fd and avgweight?
-    formula<-formula(paste0(net,'~age+gender+avgweight+', meas))
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
     assign(name, lm(formula, data=main_schaeferwsbm))
     print(summary(get(name)))
     print(lm.beta(get(name)))
     name<-paste0("gam_wm_ls_",net)
-    gamformula<-formula(paste0(net,'~s(age)+gender+avgweight+', meas))
+    gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
     assign(name, gam(gamformula, data=main_schaeferwsbm, REML=TRUE))
     print(exactRLRT(gamm(gamformula, data=main_schaeferwsbm, REML=TRUE)$lme))
   }
