@@ -10,6 +10,7 @@ library(freesurferformats)
 library(readr)
 library(tidyr)
 library(ggplot2)
+library(aricode)
 #turn off scientific notation
 options(scipen = 9)
 
@@ -268,7 +269,7 @@ clipped_silhouette_lh <- clip.data(silhouette_lh_fs6, lower_bound,0.6)
 #Visualize them on fsaverage6
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
 rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_fsaverage6.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("darkorchid","mediumpurple","gray", "white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
 # Viz confidence maps for Yeo dev ------------------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
@@ -285,7 +286,7 @@ clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,0.6)
 #Visuzalize them
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("darkorchid","mediumpurple","gray", "white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
 # Overlay confidence for adults and kids ----------------------------------
 silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
@@ -309,13 +310,37 @@ vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated
 ## RAND or NMI COMPARE
 library(igraph)
 compare(cbind(silhouette_lh_dev,silhouette_rh_dev), cbind(silhouette_lh_yeo7, silhouette_rh_yeo7), method = "nmi")
+clustComp(c(silhouette_lh_dev,silhouette_rh_dev), c(silhouette_lh_yeo7, silhouette_rh_yeo7))
 
+# Sum and difference of confidence maps -----------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
+#clip it at 0 first, then add together both!
+silhouette_lh_yeo7[silhouette_lh_yeo7<0] <- 0
+silhouette_rh_yeo7[silhouette_rh_yeo7<0] <- 0
+silhouette_lh_dev[silhouette_lh_dev<0] <- 0
+silhouette_rh_dev[silhouette_rh_dev<0] <- 0
+
+sum_silhouette_devyeo_lh <- silhouette_lh_dev+silhouette_lh_yeo7
+sum_silhouette_devyeo_rh <- silhouette_rh_dev+silhouette_rh_yeo7
+
+#Plot sum of confidence maps
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_summed_yeo7_yeodev.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',sum_silhouette_devyeo_lh, sum_silhouette_devyeo_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white","white","white")),  views="t4", rglactions=rglactions,rgloptions = rgloptions,draw_colorbar = T)
+
+#Calculate differences between the two confidence maps
+#Where is there more uncertainty in kids than adults?
+difference_sil_lh <- silhouette_lh_dev-silhouette_lh_yeo7 #if confidence in kids is low and adults high, this is negative, if kids high and adults low, this is positive
+difference_sil_rh <- silhouette_rh_dev-silhouette_rh_yeo7
+
+rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_diff_yeo7_yeodev_redhighadults.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',difference_sil_lh, difference_sil_rh, "inflated", colormap = colorRampPalette(c("coral","white","cyan3")),  views="t4",rgloptions = rgloptions, rglactions=rglactions,draw_colorbar = T)
 
 # Plot confidence in community assignment by Yeo7 system -------------------------------------
 library(Hmisc)
 library(plyr)
 library(RColorBrewer)
 library(reshape2)
+source("~/Documents/tools/raincloud.R")
 
 silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
 silhouette_rh_dev <-  yeo_dev_partition$rh.s
@@ -339,14 +364,50 @@ g <- ggplot(data = data, aes(y = silhouette, x = yeo7, fill = yeo7)) +
   expand_limits(x = 5.25) +
   guides(fill = FALSE) +
   guides(color = FALSE) +
-  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#C33AF8", "#0A9045", "#B6C988", "#EF9C23", "#E34A53")) +
-  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#C33AF8", "#0A9045", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
   # coord_flip() +
   theme_bw() +
   raincloud_theme
 
 g
 
+# Plot confidence in community assignment by Yeodev system (Supplement)-------------------------------------
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+source("~/Documents/tools/raincloud.R")
+
+silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
+silhouette_rh_dev <-  yeo_dev_partition$rh.s
+silhouette_dev <- rbind(silhouette_lh_dev,silhouette_rh_dev)
+yeodev <- c(yeo_dev_lh, yeo_dev_rh)
+data <- data.frame(silhouette_dev, as.character(yeodev))
+data <- data[data$as.character.yeodev. != "0",]#remove the medial wall
+colnames(data) <- c("silhouette", "yeodev")
+
+## Raincloud plot
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+
+sumld<- ddply(data, ~yeodev, summarise, mean = mean(silhouette), median = median(silhouette), lower = lb(silhouette), upper = ub(silhouette))
+
+head(sumld)
+g <- ggplot(data = data, aes(y = silhouette, x = yeodev, fill = yeodev)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = silhouette, color = yeodev), position = position_jitter(width = .15), size = .08, alpha = 0.15) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+
+g
 ####################################
 ############# WSBM #################
 ####################################
@@ -364,7 +425,7 @@ barplot(1:8, col=yeo_colors(8))
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
 vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
-                             wsbm_consensus_rh, colormap=yeo_colors, "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions)
+                             wsbm_consensus_rh, colormap=yeo_colors, "inflated", views="t4",rgloptions = rgloptions, rglactions = rglactions)
 
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
@@ -505,10 +566,16 @@ freq_rh=as.list(setNames(c(0, freq[201:400]), schaefer_atlas_region_names_rh))
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"inconsistent_assignment.png"))
 vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  freq_lh, 
-                             freq_rh, colormap=colorRampPalette(c("white","gray","gray","gray","mediumpurple","mediumpurple","mediumpurple","darkorchid")), "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+                             freq_rh, colormap=colorRampPalette(c("white","burlywood3","burlywood4")), "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
 
-# Plot variance in community assignment by Yeo system ------------------------
-yeo_nodes=read.table('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', col.names = "yeo_nodes")
+# Plot variance in community assignment by Yeo7 system ------------------------
+source("~/Documents/tools/raincloud.R")
+library(Hmisc)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+
+yeo_nodes=read.table('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', col.names = "yeo_nodes")
 yeo_nodes <- as.character(yeo_nodes$yeo_nodes)
 #Read in the frequency of ties in the group WSBM partition
 z <- readMat(paste0(wsbm_datadir,"consensus_iter_mode.mat"), drop = )
@@ -517,14 +584,55 @@ freq_continuous <- abs(freq-670) #change into the number of non-modal assignment
 data <- data.frame(yeo_nodes,freq_continuous)
 colnames(data) <- c('yeo7', 'freq')
 
+## Raincloud plot
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+sumld<- ddply(data, ~yeo7, summarise, mean = mean(freq), median = median(freq), lower = lb(freq), upper = ub(freq))
 
-se <- function(x){sd(x)/sqrt(length(x))}
-my_dat <- data %>% group_by(yeo7) %>% summarise(my_mean = mean(freq),my_se = se(freq)) #this fails if plyr is loaded!
+head(sumld)
+g <- ggplot(data = data, aes(y = freq, x = yeo7, fill = yeo7)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = freq, color = yeo7), position = position_jitter(width = .08), size = .5, alpha = 0.5) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values=c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
 
-p<-ggplot(data, aes(x=yeo7, y=freq)) + geom_jitter(position=position_jitter(0.1), cex=1, alpha=0.2) +geom_bar(data=my_dat, aes(y=my_mean,fill=yeo7, 
-    x=yeo7,ymin=my_mean-my_se,ymax=my_mean+my_se), stat="identity", width = 0.75) + geom_errorbar(data=my_dat, aes(y=my_mean,x=yeo7,ymin=my_mean-my_se,ymax=my_mean+my_se), width = 0.25) + theme_classic()
+g
+# Plot variance in community assignment by WSBM system (supplement)------------------------
+#Read in the frequency of ties in the group WSBM partition
+z <- readMat(paste0(wsbm_datadir,"consensus_iter_mode.mat"), drop = )
+freq<- t(z$freq)
+freq_continuous <- abs(freq-670) #change into the number of non-modal assignments out of 670
+partitions <- readMat(paste0(wsbm_datadir,"n670_training_sample_consensus_partitions_yeorelabeled.mat"), drop = )
+consensus_iterative_labels <- partitions$consensus.iter.mode.yeorelabeled
+data <- data.frame(as.character(consensus_iterative_labels),freq_continuous)
+colnames(data) <- c('wsbm', 'freq')
+## Raincloud plot
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+sumld<- ddply(data, ~wsbm, summarise, mean = mean(freq), median = median(freq), lower = lb(freq), upper = ub(freq))
 
-p
+head(sumld)
+g <- ggplot(data = data, aes(y = freq, x = wsbm, fill = wsbm)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = freq, color = wsbm), position = position_jitter(width = .08), size = .5, alpha = 0.5) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+
+g
 
 # Overlap of variability in WSBM and Yeo Dev ------------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
@@ -552,4 +660,17 @@ overlap_lh <- as.numeric((silhouette_lh_dev_bin+lh_freq_bin)==2)
 overlap_rh <- as.numeric((silhouette_rh_dev_bin+rh_freq_bin)==2)
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"overlap_yeodev_confidence_inconsistence_wsbm.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated", colormap = colorRampPalette(c("gray", "blue","lightblue", "purple")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+# Sum of variability in WSBM and Yeo Dev ------------------------------
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
+
+#normalize the frequency of inconsistent assignments to 0-1 and invert so that lower is less consistent assignment
+rh_freq_perc <- 1-(rh_freq/334)
+lh_freq_perc <- 1-(lh_freq/325)
+#sum them together
+sum_lh <- silhouette_lh_dev+lh_freq_perc
+sum_rh <- silhouette_rh_dev+rh_freq_perc
+
+rglactions=list("snapshot_png"=paste0(output_image_directory,"sum_yeodev_confidence_inconsistence_wsbm.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',sum_lh, sum_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
