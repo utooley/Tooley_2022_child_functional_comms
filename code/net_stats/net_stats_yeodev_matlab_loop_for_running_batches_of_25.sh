@@ -1,8 +1,8 @@
 #Loop to submit matlab jobs for running full corr mats with yeo-dev
 code_dir=/cbica/projects/spatial_topography/code/net_stats
-subject_list=/cbica/projects/spatial_topography/data/subjLists/release2/site16/n670_subjects_only_filtered_runs_site16_postprocess.txt
+subject_list=/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/n546_filtered_runs_site14site20_postprocess.csv
 
-x=26 #increment this by 1 each time people stop running. Run in batches of 25
+x=1 #increment this by 1 each time people stop running. Run in batches of 25
 
 mapfile -t myArray < $subject_list
 begin=$(expr ${x} \* 25)
@@ -26,9 +26,9 @@ for i in "${myArray[@]}";
 do
 echo $i
 if [ -e ${data_dir}/${i}_site16_fsaverage6_yeodev_network_stats.csv ]; then
-  cat ${data_dir}/${i}_site16_fsaverage6_yeodev_network_stats.csv | head -2 | tail -1 >> ${data_dir}/INCOMPLETE_n670_training_sample_fsaverage6_yeodev_network_stats.csv
+  cat ${data_dir}/${i}_site16_fsaverage6_yeodev_network_stats.csv | head -2 | tail -1 >> ${data_dir}/n670_training_sample_fsaverage6_yeodev_network_stats.csv
 else
   echo ${i} 'doesnt exist'
-  qsub ${code_dir}/run_matlab_net_stats.sh ${i}
+  #qsub ${code_dir}/run_matlab_net_stats.sh ${i}
 fi
 done
