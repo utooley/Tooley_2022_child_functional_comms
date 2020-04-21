@@ -1,9 +1,9 @@
 function net_stats_surfaces_yeodev_subject_script(sub)
 %% Paths
-outdir='/cbica/projects/spatial_topography/data/imageData/net_stats/site16_subjectwise'
+outdir='/cbica/projects/spatial_topography/data/imageData/net_stats/site14site20_subjectwise/'
 nets_dir='/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/'
 %data_dir='/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek'
-subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/yeo_networks'
+subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/'
 addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/WSBM_v1.2'))
 addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/system_matrix_tools/'))
 addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/BCT/'))
@@ -15,8 +15,8 @@ clustered=load(fullfile(nets_dir, file))
 labels=[clustered.lh_labels
     clustered.rh_labels]
 
-listdir=strcat('/cbica/projects/spatial_topography/data/subjLists/release2/site16')
-fc_matrices_dir=strcat('/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/fsaverage6_full_corrmats/')
+listdir=strcat('/cbica/projects/spatial_topography/data/subjLists/release2/site14site20')
+fc_matrices_dir=strcat('/cbica/projects/spatial_topography/data/imageData/fc_matrices/site14site20_test_sample/fsaverage6_full_corrmats/')
 %load subject list
 %% Load in surfaces and compute Yeo-dev connectivity matrices
 %clear variables that might have overlapped with previous subject list
