@@ -11,6 +11,7 @@ library(visreg)
 library(ggplot2)
 library(data.table)
 library(vioplot)
+library(performance)
 
 # Load data ---------------------------------------------------------------
 data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
@@ -123,8 +124,11 @@ for (meas in measures){
   scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
   p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
 }
+#take out outliers!
 
 # Cognitive measures-------------------------------------------------------
+#add checks for model fit and performance with check_model() and model_performance()
+
 measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
 #Schaefer400-Yeo7
