@@ -1,83 +1,83 @@
-% %Running on the cluster
-% datadir=fullfile('/data/jux/mackey_group/public_data/ABCD/bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek')
-% listdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site14site20/'
-% z_outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zNetworks'
-% noz_outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400Networks'
-% z_avg_outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zavgNetworks'
-% addpath(genpath('/home/utooley/matlab/WSBM_v1.2'))
-% addpath(genpath('/home/utooley/matlab/system_matrix_tools/'))
-% addpath(genpath('/home/utooley/matlab/BCT/'))
-% 
-% %running with the cluster mounted locally
-% %CHECK WHERE ON THE CLUSTER IS MOUNTED EXACTLY-THAT MAY MESS THIS UP
-% datadir=fullfile('~/Desktop/cluster/jux/mackey_group/public_data/ABCD/bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek')
-% listdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site14site20/'
-% z_outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zNetworks'
-% noz_outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400Networks'
-% z_avg_outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zavgNetworks'
-% 
-% %get the subject list,excluding those who have NAs
-% subjlist=readtable(fullfile(listdir,'n546_filtered_runs_site14site20_postprocess.csv')) %the first two runs here are those that were input into gwMRF
-% %% Z-score FC matrices for the test sample
-% for n=1:height(subjlist)
-%     sub=char(subjlist.id(n)) %look at this
-%     %sub=subjlist{n,:}; 
-%     run1=char(subjlist.var1(n)) %%% FOR RUN 1 %%
-%     file=fullfile(datadir,sub, run1, strcat('fcon/schaefer400x7/',sub,'_',run1,'_schaefer400x7_network.txt'));
-%     try
-%     %subfcmat=load(file{1});
-%     subfcmat=load(file);
-%     %make into adjacency matrix and save out
-%     size_vec=tril(ones(400,400),-1);
-%     adj_mat=size_vec;
-%     adj_mat(adj_mat==1)=subfcmat;
-%     subfcmat=adj_mat+adj_mat';
-%     outfile=fullfile(noz_outdir,strcat(sub,'_',run1,'_schaefer400x7_network.txt'));
-%     csvwrite(outfile, subfcmat);
-%    % subfcmat(:,103)=[]; %never checked parcel coverage for this.
-%     %replace the diagonal of 1's with 0's
-%     for x=1:400
-%         subfcmat(x,x)=0;
-%     end
-%     %create an empty z-matrx
-%     zfc1=[];
-%     for i=1:400
-%         %cycle through each column of the FC matrix and do a fisher r-to-z
-%         %for each value
-%         zfc1(:,i)=fisherz(subfcmat(:,i));
-%     end
-%     outfile=fullfile(z_outdir, strcat(sub,'_', run1,'_Schaefer400x7_znetwork.txt'));
-%     csvwrite(outfile, zfc1);
-%     run2=char(subjlist.var2(n))  %%% FOR RUN 2 %%
-%     file=fullfile(datadir,sub, run2, strcat('fcon/schaefer400x7/',sub,'_',run2,'_schaefer400x7_network.txt'));
-%     subfcmat=load(file);
-%     size_vec=tril(ones(400,400),-1); %make into adjacency matrix and save out
-%     adj_mat=size_vec;
-%     adj_mat(adj_mat==1)=subfcmat;
-%     subfcmat=adj_mat+adj_mat';
-%     outfile=fullfile(noz_outdir,strcat(sub,'_',run2,'_schaefer400x7_network.txt'));
-%     csvwrite(outfile, subfcmat);
-%     for x=1:400
-%         subfcmat(x,x)=0;
-%     end
-%     %create an empty z-matrx
-%     zfc2=[];
-%     for i=1:400
-%         %cycle through each column of the FC matrix and do a fisher r-to-z
-%         %for each value
-%         zfc2(:,i)=fisherz(subfcmat(:,i));
-%     end
-%     outfile=fullfile(z_outdir, strcat(sub,'_', run2,'_Schaefer400x7_znetwork.txt'));
-%     csvwrite(outfile, zfc2);
-%     %% AVERAGE THE TWO RUNS %%
-%     aggregmat=(zfc2+zfc1)/2;
-%     outfile=fullfile(z_avg_outdir, strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
-%     csvwrite(outfile, aggregmat);
-%     catch
-%     fprintf('Cant read sub %s run %s, skipped. \n', sub);
-%   end
-% end
-% 
+%Running on the cluster
+datadir=fullfile('/data/jux/mackey_group/public_data/ABCD/bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek')
+listdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site14site20/'
+z_outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zNetworks'
+noz_outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400Networks'
+z_avg_outdir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zavgNetworks'
+addpath(genpath('/home/utooley/matlab/WSBM_v1.2'))
+addpath(genpath('/home/utooley/matlab/system_matrix_tools/'))
+addpath(genpath('/home/utooley/matlab/BCT/'))
+
+%running with the cluster mounted locally
+%CHECK WHERE ON THE CLUSTER IS MOUNTED EXACTLY-THAT MAY MESS THIS UP
+datadir=fullfile('/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek')
+listdir='/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/'
+z_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zNetworks'
+noz_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400Networks'
+z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site14site20_test_sample/Schaefer400zavgNetworks'
+
+%get the subject list,excluding those who have NAs
+subjlist=readtable(fullfile(listdir,'n544_filtered_runs_site14site20_postprocess.csv')) %the first two runs here are those that were input into gwMRF
+%% Z-score FC matrices for the test sample
+for n=1:height(subjlist)
+    sub=char(subjlist.id(n)) %look at this
+    %sub=subjlist{n,:}; 
+    run1=char(subjlist.var1(n)) %%% FOR RUN 1 %%
+    file=fullfile(datadir,sub, run1, strcat('fcon/schaefer400x7/',sub,'_',run1,'_schaefer400x7_network.txt'));
+    try
+    %subfcmat=load(file{1});
+    subfcmat=load(file);
+    %make into adjacency matrix and save out
+    size_vec=tril(ones(400,400),-1);
+    adj_mat=size_vec;
+    adj_mat(adj_mat==1)=subfcmat;
+    subfcmat=adj_mat+adj_mat';
+    outfile=fullfile(noz_outdir,strcat(sub,'_',run1,'_schaefer400x7_network.txt'));
+    csvwrite(outfile, subfcmat);
+   % subfcmat(:,103)=[]; %never checked parcel coverage for this.
+    %replace the diagonal of 1's with 0's
+    for x=1:400
+        subfcmat(x,x)=0;
+    end
+    %create an empty z-matrx
+    zfc1=[];
+    for i=1:400
+        %cycle through each column of the FC matrix and do a fisher r-to-z
+        %for each value
+        zfc1(:,i)=fisherz(subfcmat(:,i));
+    end
+    outfile=fullfile(z_outdir, strcat(sub,'_', run1,'_Schaefer400x7_znetwork.txt'));
+    csvwrite(outfile, zfc1);
+    run2=char(subjlist.var2(n))  %%% FOR RUN 2 %%
+    file=fullfile(datadir,sub, run2, strcat('fcon/schaefer400x7/',sub,'_',run2,'_schaefer400x7_network.txt'));
+    subfcmat=load(file);
+    size_vec=tril(ones(400,400),-1); %make into adjacency matrix and save out
+    adj_mat=size_vec;
+    adj_mat(adj_mat==1)=subfcmat;
+    subfcmat=adj_mat+adj_mat';
+    outfile=fullfile(noz_outdir,strcat(sub,'_',run2,'_schaefer400x7_network.txt'));
+    csvwrite(outfile, subfcmat);
+    for x=1:400
+        subfcmat(x,x)=0;
+    end
+    %create an empty z-matrx
+    zfc2=[];
+    for i=1:400
+        %cycle through each column of the FC matrix and do a fisher r-to-z
+        %for each value
+        zfc2(:,i)=fisherz(subfcmat(:,i));
+    end
+    outfile=fullfile(z_outdir, strcat(sub,'_', run2,'_Schaefer400x7_znetwork.txt'));
+    csvwrite(outfile, zfc2);
+    %% AVERAGE THE TWO RUNS %%
+    aggregmat=(zfc2+zfc1)/2;
+    outfile=fullfile(z_avg_outdir, strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
+    csvwrite(outfile, aggregmat);
+    catch
+    fprintf('Cant read sub %s run %s, skipped. \n', sub);
+  end
+end
+
 % %% Run some partition quality metrics on the Yeo partition and estimate network statistics
 % %read in the yeo partition
 % yeo_nodes=dlmread('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')

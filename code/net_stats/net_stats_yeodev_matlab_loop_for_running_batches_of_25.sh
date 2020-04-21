@@ -1,9 +1,17 @@
 #Loop to submit matlab jobs for running full corr mats with yeo-dev
 code_dir=/cbica/projects/spatial_topography/code/net_stats
-subject_list=/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/n546_filtered_runs_site14site20_postprocess.csv
+subject_list=/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/n544_subjects_only_filtered_runs_site14site20_postprocess.txt
 
-x=1 #increment this by 1 each time people stop running. Run in batches of 25
+x=9 #increment this by 1 each time people stop running. Run in batches of 25
 
+# FOR SITE14SITE20 subject list
+for subject in `cat ${subject_list} | cut -d, -f2 | uniq | head -$(expr ${x} \* 25)| tail -25`
+do
+echo $subject
+qsub ${code_dir}/run_matlab_net_stats.sh ${subject}
+done
+
+# FOR SITE 16 subject list
 mapfile -t myArray < $subject_list
 begin=$(expr ${x} \* 25)
 
@@ -12,7 +20,6 @@ do
 echo $i
 qsub ${code_dir}/run_matlab_net_stats.sh ${i}
 done
-
 
 ## LOOP TO AGGREGATE SUBJECT DATA AND SUBMIT NEW JOBS FOR THEM
 

@@ -1,7 +1,7 @@
 # Make subject lists ------------------------------------------------------
 library(dplyr)
-xcp_qa_vars="~/Desktop/cluster/jux/mackey_group/public_data/ABCD/bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/"
-subjlist_vars ="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site14site20/"
+xcp_qa_vars="/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/"
+subjlist_vars ="/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/"
 
 main <- read.csv(paste0(xcp_qa_vars,"XCP_QAVARS_with_nVols.csv"))
 summary(main) #10 NAs, n=595, 2348 runs
@@ -36,16 +36,32 @@ length(unique(main$id0))
 main$nVolsRemain <- main$nVols-main$nVolCensored
 summary(main$nVolsRemain)
 
+#sub-NDARINV8GP2PFEE is missing parcel 321 due to bad signal coverage, exclude them
+main <- main %>% filter(!id0 == "sub-NDARINV8GP2PFEE")
+length(unique(main$id0))
+
+#Remove the 2 subjects who have high mincost from bbregister to their surfaces on too many runs, indicative of 
+#signal dropout--found this out after this step
+subs <- c("sub-NDARINVW2JAJB5C","sub-NDARINVPUGJUJZ2")
+main <- main %>% group_by(id0) %>% filter(!id0 == "sub-NDARINVW2JAJB5C" & !id0 == "sub-NDARINVPUGJUJZ2")
+dim(main) #2001->1983, n=xx runs removed, n=18 people removed
+length(unique(main$id0))
+
+#Also exclude sub-NDARINV38AVND76-run07, which has 0.61 mincost, so we can use a different run for that subject instead.
+main <- main %>% filter(!(id0 == "sub-NDARINV38AVND76" &  id1== "run-07"))
+dim(main) #2001->1983, n=xx runs removed, n=18 people removed
+length(unique(main$id0))
+
 #and with less than two runs left now?
 mainfilt <- main %>% group_by(id0) %>% 
   filter(n() >= 2)
 dim(mainfilt) #2001->1983, n=xx runs removed, n=18 people removed
 length(unique(mainfilt$id0))
-
+                                                  
 #save out filtered subject list
 subjlist <- select(mainfilt, id0:id1) %>% ungroup() 
 subjlist$id0 <- as.character(subjlist$id0)
-write.csv(subjlist, paste0(subjlist_vars,"n",length(unique(subjlist$id0)),"_filtered_runs_site14site20_postprocess.csv"))
+write.csv(subjlist, paste0(subjlist_vars,"n",length(unique(subjlist$id0)),"_filtered_runs_site14site20_nofilenames.csv"))
 
 ####
 library(data.table)
@@ -65,7 +81,6 @@ subjlist <- subjlist %>% mutate(., name5=ifelse(is.na(var5), NA, paste0("/data/j
 
 #write it out somewhere 
 write.csv(subjlist, paste0(subjlist_vars,"n",length(unique(subjlist$id)),"_filtered_runs_site14site20_postprocess.csv"))
-
 
 # Make histograms of registration coverage ---------------------------------------
 xcp_qa_vars="~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/"

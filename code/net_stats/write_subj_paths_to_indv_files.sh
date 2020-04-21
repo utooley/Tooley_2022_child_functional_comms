@@ -20,7 +20,7 @@ input=${subjlist_dir}/n546_filtered_runs_site14site20_postprocess.csv
 
 ## WHEN SUBBING LH FOR RH, MAKE SURE IS CASE SENSITIVE!
 subjlist_dir=~/Downloads
-input=~/Downloads/n546_filtered_runs_site14site20_fullpaths_surf2surf_rh.txt
+input=~/Downloads/n546_filtered_runs_site14site20_fullpaths_surf2surf_lh.txt
 while read -r line
 do
 echo $line
@@ -28,6 +28,6 @@ echo $line
 # newline2=$(echo $line | cut -d , -f 8)
 sub=$(echo $line | cut -d / -f 10)
 echo $sub
-filename=${subjlist_dir}/subjects_site14/${sub}_fullpaths_surf2surf_rh.txt
+filename=${subjlist_dir}/subjects_site14/${sub}_fullpaths_surf2surf_lh.txt
 echo $line > $filename
 done < $input

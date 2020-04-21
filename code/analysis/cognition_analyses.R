@@ -190,11 +190,14 @@ WAITING!
 ########### TEST SAMPLE #########
 #####################################
 subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/'
+
+#MAKE SURE TO TAKE OUT THE TWO SUBJECTS WHO NEED TO BE EXCLUDED.
+
 #Get network connectivity data
 #From Schaefer400-Yeo7
-net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n546_test_sample_schaefer400_yeo7_network_stats.csv"))
+net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n544_test_sample_schaefer400_yeo7_network_stats.csv"))
 #From Schaefer400-WSBM
-net_stats_schaeferwsbm <- read.csv(paste0(net_data_dir,"n546_site14site20_test_sample_schaefer400_wsbm_network_stats.csv"))
+net_stats_schaeferwsbm <- read.csv(paste0(net_data_dir,"n544_site14site20_test_sample_schaefer400_wsbm_network_stats.csv"))
 #From fsaverage6-Yeo dev
 
 #remake main
@@ -205,7 +208,7 @@ main <- left_join(main, wiscv, by=c("ID", "eventname"))
 main <- left_join(main, taskfmri, by=c("ID", "eventname"))
 
 ##need to get XCP mean FD and # of outliers and control for that
-runs <- read.csv(paste0(subjlist_dir,'n546_filtered_runs_site14site20_postprocess.csv'))
+runs <- read.csv(paste0(subjlist_dir,'n544_filtered_runs_site14site20_postprocess.csv'))
 runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
 runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
 #read in the list of runs that were used and merge it with xcp qa vars
