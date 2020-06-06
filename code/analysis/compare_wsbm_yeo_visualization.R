@@ -72,6 +72,16 @@ rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
 vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order', 'rh',  'inflated', views=c('sr'), rgloptions = rgloptions, rglactions = rglactions);
 
+# Plot Yeo17 atlas on brain  -------------------------------------------
+#try to find if blue blob is head/face--plot yeo17
+rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_17.png"))
+vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_17Networks_order', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+
+#try to find if blue blob is head/face?
+subjects_dir="~/Applications/freesurfer/subjects"
+  
+vis.subject.annot(subjects_dir, 'fsaverage', 'PALS_B12_Visuotopic', 'lh',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+
 # Plot the Yeo developmental partition on brain ---------------------------
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo_dev/"
 
@@ -176,7 +186,7 @@ switches_lh <- switches[1:40962]
 switches_rh <- switches[40963:81924]
 
 #Make a palette for this
-switch_colors=colorRampPalette(c("#D3D3D3", "#FF999A", "#99F0FF","#C381FF", "#FF4312", "#cec2b7")) #gray for 0(same),  ,tan for other switch
+switch_colors=colorRampPalette(c("#D3D3D3", "#FF999A", "#C381FF", "#df613a","#d5668f", "#cec2b7")) #gray for 0(same),  ,tan for other switch
 barplot(1:6,col=switch_colors(6))
 
 #Plot this vector of switches on fsaverage6 surface
