@@ -55,13 +55,19 @@ taskfmri = droplevels(taskfmri)
 taskfmri$ID <- taskfmri$subjectkey
 taskfmri <- select(taskfmri, -c(collection_id:dataset_id)) 
 taskfmri <- taskfmri %>% mutate_at(vars(tfmri_nback_beh_switchflag:tfmri_nb_r2_beh_c0bpnl_stdrt), as.numeric)
+#get recognition memory post-scanner task scores
+recmem <- read.delim(paste0(data_dir,"mribrec02.txt"), stringsAsFactors = F) 
+recmem = recmem[-1,]
+recmem = droplevels(recmem)
+recmem$ID <- recmem$subjectkey
+recmem <- select(recmem, -c(collection_id:dataset_id)) 
+recmem <- recmem %>% mutate_at(vars(tfmri_rec_all_beh_newnf_hr:tfmri_rec_all_beh_place_dp), as.numeric)
 
 main<- left_join(sites,socio, by=c("ID", "eventname"))
 main <- left_join(main, income, by=c("ID", "eventname"))
 main <- left_join(main, nihtbx, by=c("ID", "eventname"))
 main <- left_join(main, wiscv, by=c("ID", "eventname"))
 main <- left_join(main, taskfmri, by=c("ID", "eventname"))
-
 
 #####################################
 ########### TRAINING SAMPLE #########
@@ -111,7 +117,6 @@ main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
 
 #recode income
 main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
-
 
 # Plot data descriptives --------------------------------------------------
 measures=select(main_schaeferyeo7,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
