@@ -12,6 +12,7 @@ library(ggplot2)
 library(data.table)
 library(vioplot)
 library(performance)
+library(PerformanceAnalytics)
 
 # Load data ---------------------------------------------------------------
 data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
@@ -78,6 +79,7 @@ net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n670_training_sample_sch
 #From Schaefer400-WSBM
 net_stats_schaeferwsbm <- read.csv(paste0(net_data_dir,"n670_site16_training_sample_schaefer400_wsbm_network_stats.csv"))
 #From fsaverage6-Yeo dev
+net_stats_yeodev <- read.csv(paste0(net_data_dir,"n670_training_sample_fsaverage6_yeodev_network_stats.csv"))
 
 ##need to get XCP mean FD and # of outliers and control for that
 runs <- read.csv(paste0(subjlist_dir,'parcellation/n670_filtered_runs_site16_postprocess.csv'))
@@ -109,47 +111,70 @@ main$ID <- paste0("sub-",main$ID)
 main$age <- as.numeric(main$interview_age.x)/12
 #make sex a factor
 main$gender <- as.factor(main$gender.x)
+#average nback face measures
+main$nback_2back_place_rate_correct <- main$tfmri_nb_all_beh_c2bp_rate #is rate of correct for 2-back places
+main$nback_2back_face_rate_correct <- (main$tfmri_nb_all_beh_c2bpf_rate+main$tfmri_nb_all_beh_c2bnf_rate+main$tfmri_nb_all_beh_c2bngf_rate)/3 #average together all the face rates
 
 main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
 main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
 main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
 main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
+main_yeodev <- left_join(net_stats_yeodev, main, by="ID")
+main_yeodev <- left_join(main_yeodev, qa, by="ID")
 
-#recode income
+#recode income if I end up using it
 main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
 
 # Plot data descriptives --------------------------------------------------
-measures=select(main_schaeferyeo7,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
+measures=select(main_schaeferyeo7_nback,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
 par(mfrow=c(4,3))
 i=1
 for (meas in measures){
   name=colnames(measures)[i]
   hist(meas, main=name, col = "lightblue") #hist of measure
   i=i+1
-  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
-  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
+  scatter.smooth(main_schaeferyeo7_nback$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7_nback$gender, main="versus gender") #gender
 }
-#take out outliers!
+#plot each of them with each of the others
+chart.Correlation(measures)
+
+#take out those subjects who were flagged for poor performance on the nback, about 5% of them
+main_schaeferyeo7_nback <- filter(main_schaeferyeo7, tfmri_nback_beh_performflag==1 | is.na(tfmri_nback_beh_performflag))# %>% filter(., nback_2back_place_rate_correct > 0.6)
+main_schaeferwsbm_nback <- filter(main_schaeferwsbm, tfmri_nback_beh_performflag==1 | is.na(tfmri_nback_beh_performflag))# %>% filter(., nback_2back_place_rate_correct > 0.6)
+main_yeodev_nback <- filter(main_yeodev, tfmri_nback_beh_performflag==1 | is.na(tfmri_nback_beh_performflag)) %>% filter(., nback_2back_place_rate_correct > 0.6)
 
 # Cognitive measures-------------------------------------------------------
 #add checks for model fit and performance with check_model() and model_performance()
 
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
-nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+nets=c("system_segreg_yeo","mean_within_sys_yeo", "modul_yeo")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)
 for (net in nets){
   print(net)
   name<-paste0("lm_", meas,"_",net)
-  formula<-formula(paste0(net,'~age+gender+', meas))
+  formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
   assign(name, lm(formula, data=main_schaeferyeo7))
   print(summary(get(name)))
+}
+}
+  
+measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    assign(name, lm(formula, data=main_schaeferyeo7_nback))
+    print(summary(get(name)))
   print(lm.beta(get(name)))
-  name<-paste0("gam_wm_ls_",net)
-  gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
-  assign(name, gam(gamformula, data=main_schaeferyeo7, REML=TRUE))
-  print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7, REML=TRUE)$lme))
+  #name<-paste0("gam_wm_ls_",net)
+  #gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
+  #assign(name, gam(gamformula, data=main_schaeferyeo7_nback, REML=TRUE))
+  #print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7_nback, REML=TRUE)$lme))
 }
 }
 #
@@ -163,27 +188,40 @@ BIC(lm_wm_ls_sys6to6)
 AIC(lm_wm_ls_sys6to6)
 
 #Schaefer400-WSBM
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
-nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+nets=c("system_segreg_wsbm","mean_within_sys_wsbm", "modul_wsbm")
+#Schaefer400-Yeo7
 for (meas in measures){
-print(meas)
-for (net in nets){
-  print(net)
-  name<-paste0("lm_", meas,"_",net)
-  formula<-formula(paste0(net,'~age+gender+', meas))
-  assign(name, lm(formula, data=main_schaeferwsbm))
-  print(summary(get(name)))
-  print(lm.beta(get(name)))
-  name<-paste0("gam_wm_ls_",net)
-  gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
-  assign(name, gam(gamformula, data=main_schaeferwsbm, REML=TRUE))
-  print(exactRLRT(gamm(gamformula, data=main_schaeferwsbm, REML=TRUE)$lme))
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    assign(name, lm(formula, data=main_schaeferwsbm))
+    print(summary(get(name)))
+  }
 }
+
+measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    assign(name, lm(formula, data=main_schaeferwsbm_nback))
+    print(summary(get(name)))
+    print(lm.beta(get(name)))
+    #name<-paste0("gam_wm_ls_",net)
+    #gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
+    #assign(name, gam(gamformula, data=main_schaeferyeo7_nback, REML=TRUE))
+    #print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7_nback, REML=TRUE)$lme))
+  }
 }
 #
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys4to7), data=main_schaeferwsbm, REML=TRUE)$lme)
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys6to7), data=main_schaeferwsbm, REML=TRUE)$lme)
-visreg(lm_nihtbx_list_uncorrected_sys6to6)#this does not look believably non-linear
+visreg(lm_nback_2back_place_rate_correct_sys6to6)#this does not look believably non-linear
 
 #No prediction
 
@@ -192,15 +230,36 @@ BIC(lm_wm_ls_sys6to6)
 AIC(lm_wm_ls_sys6to6)
 
 #From fsaverage6-Yeo dev
-WAITING!
-  
-  
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+nets=c( "avgweight","system_segreg_yeodev", "mean_within_sys_yeodev","mean_between_sys_yeodev")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    assign(name, lm(formula, data=main_yeodev))
+    print(summary(get(name)))
+  }
+}
+
+measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    assign(name, lm(formula, data=main_yeodev_nback))
+    print(summary(get(name)))
+    print(lm.beta(get(name)))
+  }
+}
+visreg(lm_nback_2back_face_rate_correct_sys4to4)
 #####################################
 ########### TEST SAMPLE #########
 #####################################
 subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site14site20/'
-
-#MAKE SURE TO TAKE OUT THE TWO SUBJECTS WHO NEED TO BE EXCLUDED.
 
 #Get network connectivity data
 #From Schaefer400-Yeo7
@@ -208,6 +267,7 @@ net_stats_schaeferyeo7 <- read.csv(paste0(net_data_dir,"n544_test_sample_schaefe
 #From Schaefer400-WSBM
 net_stats_schaeferwsbm <- read.csv(paste0(net_data_dir,"n544_site14site20_test_sample_schaefer400_wsbm_network_stats.csv"))
 #From fsaverage6-Yeo dev
+net_stats_yeodev <- read.csv(paste0(net_data_dir,"n544_test_sample_fsaverage6_yeodev_network_stats.csv"))
 
 #remake main
 main<- left_join(sites,socio, by=c("ID", "eventname"))
@@ -243,59 +303,111 @@ main$ID <- paste0("sub-",main$ID)
 main$age <- as.numeric(main$interview_age.x)/12
 #make sex a factor
 main$gender <- as.factor(main$gender.x)
+#make site a factor
+main$site <- as.factor(main$site_id_l)
+#average nback face measures
+main$nback_2back_place_rate_correct <- main$tfmri_nb_all_beh_c2bp_rate #is rate of correct for 2-back places
+main$nback_2back_face_rate_correct <- (main$tfmri_nb_all_beh_c2bpf_rate+main$tfmri_nb_all_beh_c2bnf_rate+main$tfmri_nb_all_beh_c2bngf_rate)/3 #average together all the face rates
 
 main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
 main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
 main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
 main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
+main_yeodev<- left_join(net_stats_yeodev, main, by="ID")
+main_yeodev <- left_join(main_yeodev, qa, by="ID")
 
 # Plot data descriptives --------------------------------------------------
-measures=select(main_schaeferyeo7,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
+
+#take out those subjects who were flagged for poor performance on the nback, about 5% of them
+main_schaeferyeo7_nback <- filter(main_schaeferyeo7, tfmri_nback_beh_performflag==1 | is.na(tfmri_nback_beh_performflag))# %>% filter(., nback_2back_place_rate_correct > 0.6)
+main_schaeferwsbm_nback <- filter(main_schaeferwsbm, tfmri_nback_beh_performflag==1 | is.na(tfmri_nback_beh_performflag))# %>% filter(., nback_2back_place_rate_correct > 0.6)
+main_yeodev_nback <- filter(main_yeodev, tfmri_nback_beh_performflag==1 | is.na(tfmri_nback_beh_performflag))
+
+measures=select(main_schaeferyeo7_nback,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
 par(mfrow=c(4,3))
 i=1
 for (meas in measures){
   name=colnames(measures)[i]
   hist(meas, main=name, col = "lightblue") #hist of measure
   i=i+1
-  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
-  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
+  scatter.smooth(main_schaeferyeo7_nback$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7_nback$gender, main="versus gender") #gender
 }
 
 # Cognitive measures-------------------------------------------------------
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
-nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
     assign(name, lm(formula, data=main_schaeferyeo7))
     print(summary(get(name)))
-    print(lm.beta(get(name)))
-    name<-paste0("gam_wm_ls_",net)
-    gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
-    assign(name, gam(gamformula, data=main_schaeferyeo7, REML=TRUE))
-    print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7, REML=TRUE)$lme))
+  }
+}
+measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    assign(name, lm(formula, data=main_schaeferyeo7_nback))
+    print(summary(get(name)))
   }
 }
 
 #Schaefer400-WSBM
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
 for (meas in measures){
-  nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7")
+  print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
     assign(name, lm(formula, data=main_schaeferwsbm))
     print(summary(get(name)))
-    print(lm.beta(get(name)))
-    name<-paste0("gam_wm_ls_",net)
-    gamformula<-formula(paste0(meas,'~s(age)+gender+fd_mean_avg+avgweight+', net))
-    assign(name, gam(gamformula, data=main_schaeferwsbm, REML=TRUE))
-    print(exactRLRT(gamm(gamformula, data=main_schaeferwsbm, REML=TRUE)$lme))
+  }
+}
+measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    assign(name, lm(formula, data=main_schaeferwsbm_nback))
+    print(summary(get(name)))
   }
 }
 
+visreg(lm_nback_2back_place_rate_correct_sys4to7)
+
+#Yeo-dev
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    assign(name, lm(formula, data=main_yeodev))
+    print(summary(get(name)))
+  }
+}
+measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
+for (meas in measures){
+  print(meas)
+  for (net in nets){
+    print(net)
+    name<-paste0("lm_", meas,"_",net)
+    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    assign(name, lm(formula, data=main_yeodev_nback))
+    print(summary(get(name)))
+  }
+}
