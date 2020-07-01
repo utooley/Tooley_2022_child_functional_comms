@@ -12,6 +12,7 @@ library(ggplot2)
 library(data.table)
 library(vioplot)
 library(performance)
+library(parallel)
 library(PerformanceAnalytics)
 
 # Load data ---------------------------------------------------------------
@@ -69,6 +70,7 @@ main <- left_join(main, income, by=c("ID", "eventname"))
 main <- left_join(main, nihtbx, by=c("ID", "eventname"))
 main <- left_join(main, wiscv, by=c("ID", "eventname"))
 main <- left_join(main, taskfmri, by=c("ID", "eventname"))
+main <- left_join(main, recmem, by=c("ID", "eventname"))
 
 #####################################
 ########### TRAINING SAMPLE #########
@@ -114,6 +116,9 @@ main$gender <- as.factor(main$gender.x)
 #average nback face measures
 main$nback_2back_place_rate_correct <- main$tfmri_nb_all_beh_c2bp_rate #is rate of correct for 2-back places
 main$nback_2back_face_rate_correct <- (main$tfmri_nb_all_beh_c2bpf_rate+main$tfmri_nb_all_beh_c2bnf_rate+main$tfmri_nb_all_beh_c2bngf_rate)/3 #average together all the face rates
+#average dprime measures
+main$dprime_faces <- (main$tfmri_rec_all_beh_posf_dpr+main$tfmri_rec_all_beh_neutf_dp+main$tfmri_rec_all_beh_negf_dp)/3
+main$dprime_places <- main$tfmri_rec_all_beh_place_dp
 
 main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
 main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
@@ -122,12 +127,22 @@ main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
 main_yeodev <- left_join(net_stats_yeodev, main, by="ID")
 main_yeodev <- left_join(main_yeodev, qa, by="ID")
 
+#average participation coefficient
+net_stats_schaeferyeo7$partcoef <- (net_stats_schaeferyeo7$sub_partcoef_neg_yeo+net_stats_schaeferyeo7$sub_partcoef_pos_yeo)/2
+net_stats_schaeferwsbm$partcoef <- (net_stats_schaeferwsbm$sub_partcoef_neg_wsbm+net_stats_schaeferwsbm$sub_partcoef_pos_wsbm)/2
+#net_stats_yeodev$partcoef <- (net_stats_yeodev$+net_stats_schaeferyeo7$sub_partcoef_pos_yeo)/2 DIDN'T DO IN YEO-DEV
+
+#take out the one outlier in within- and between- connectivity
+main_schaeferyeo7 <- filter(main_schaeferyeo7, ID != "sub-NDARINV4H7G4RXD")
+main_schaeferwsbm <- filter(main_schaeferwsbm, ID != "sub-NDARINV4H7G4RXD")
+main_yeodev <- filter(main_yeodev, ID != "sub-NDARINV4H7G4RXD")
+
 #recode income if I end up using it
 main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
 
 # Plot data descriptives --------------------------------------------------
-measures=select(main_schaeferyeo7_nback,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate"))
-par(mfrow=c(4,3))
+measures=select(main_schaeferyeo7_nback,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate","dprime_faces", "dprime_places"))
+par(mfrow=c(5,3))
 i=1
 for (meas in measures){
   name=colnames(measures)[i]
@@ -147,18 +162,27 @@ main_yeodev_nback <- filter(main_yeodev, tfmri_nback_beh_performflag==1 | is.na(
 # Cognitive measures-------------------------------------------------------
 #add checks for model fit and performance with check_model() and model_performance()
 
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
-nets=c("system_segreg_yeo","mean_within_sys_yeo", "modul_yeo")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
+#nets=c("system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo")
+nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to7", "sys5to6")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)
 for (net in nets){
   print(net)
   name<-paste0("lm_", meas,"_",net)
-  formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+  formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+', net))
   assign(name, lm(formula, data=main_schaeferyeo7))
   print(summary(get(name)))
+  print(lm.beta(get(name)))
 }
+}
+
+par(mfrow=c(3,4))
+for (net in nets){
+  #visreg(get(paste0("lm_dprime_faces_",net)), net)
+  avPlot(get(paste0("lm_dprime_faces_",net)), net)
+  #plot_model(get(paste0("lm_dprime_faces_",net)), terms = net, type="eff")
 }
   
 measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
@@ -188,18 +212,22 @@ BIC(lm_wm_ls_sys6to6)
 AIC(lm_wm_ls_sys6to6)
 
 #Schaefer400-WSBM
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
-nets=c("system_segreg_wsbm","mean_within_sys_wsbm", "modul_wsbm")
-#Schaefer400-Yeo7
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
+nets=c("system_segreg_wsbm","mean_within_sys_wsbm", "mean_between_sys_wsbm","modul_wsbm")
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+', net))
     assign(name, lm(formula, data=main_schaeferwsbm))
     print(summary(get(name)))
+    print(lm.beta(get(name)))
   }
+}
+
+for (net in nets){
+  crPlot(get(paste0("lm_dprime_faces_",net)), net)
 }
 
 measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
@@ -218,7 +246,12 @@ for (meas in measures){
     #print(exactRLRT(gamm(gamformula, data=main_schaeferyeo7_nback, REML=TRUE)$lme))
   }
 }
-#
+
+
+for (net in nets){
+  visreg(get(paste0("lm_dprime_faces_",net)), net)
+}
+
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys4to7), data=main_schaeferwsbm, REML=TRUE)$lme)
 exactRLRT(gamm(nihtbx_list_uncorrected~age+gender+s(sys6to7), data=main_schaeferwsbm, REML=TRUE)$lme)
 visreg(lm_nback_2back_place_rate_correct_sys6to6)#this does not look believably non-linear
@@ -230,17 +263,22 @@ BIC(lm_wm_ls_sys6to6)
 AIC(lm_wm_ls_sys6to6)
 
 #From fsaverage6-Yeo dev
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
-nets=c( "avgweight","system_segreg_yeodev", "mean_within_sys_yeodev","mean_between_sys_yeodev")
+#measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
+nets=c("system_segreg_yeodev", "mean_within_sys_yeodev","mean_between_sys_yeodev")
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+', net))
     assign(name, lm(formula, data=main_yeodev))
     print(summary(get(name)))
+    print(lm.beta(get(name)))
   }
+}
+
+for (net in nets){
+  visreg(get(paste0("lm_dprime_faces_",net)), net)
 }
 
 measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
@@ -256,6 +294,97 @@ for (meas in measures){
   }
 }
 visreg(lm_nback_2back_face_rate_correct_sys4to4)
+
+
+# Age effects-descriptive -------------------------------------------------------------
+yeo_measures=select(main_schaeferyeo7,one_of("age", "system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo"))
+wsbm_measures=select(main_schaeferwsbm,one_of("age", "system_segreg_wsbm","mean_within_sys_wsbm", "mean_between_sys_wsbm","modul_wsbm"))
+yeodev_measures=select(main_yeodev,one_of("age", "system_segreg_yeodev","mean_within_sys_yeodev", "mean_between_sys_yeodev"))
+
+par(mfrow=c(5,3))
+i=1
+for (meas in yeo_measures){
+  name=colnames(measures)[i]
+  hist(meas, main=name, col = "lightblue") #hist of measure
+  i=i+1
+  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
+}
+par(mfrow=c(3,5))
+for (meas in names(yeodev_measures)){
+  name=meas
+  print(meas)
+  name<-paste0("lm_", meas)
+  formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight'))
+  assign(name, lm(formula, data=main_yeodev))
+  visreg(get(name), "age", main=meas)
+  print(summary(get(name)))
+}
+
+#plot each of them with each of the others
+chart.Correlation(yeo_measures)
+chart.Correlation(wsbm_measures)
+chart.Correlation(yeodev_measures)
+
+# Age and sex effects-comparison --------------------------------------------------
+# Make dataframes for each partitions with the strength of age effects and pvals!
+covariates="~age+gender+fd_mean_avg+avgweight" #to look at age
+covariates="~gender+age+fd_mean_avg+avgweight" #to look at sex
+
+partitions=c("schaeferyeo7","schaeferwsbm", "yeodev")
+ends=c("yeo", "wsbm", "yeodev")
+i=1
+for (partition in partitions){
+  end=ends[i]
+main_unique <- dplyr::select(get(paste0("main_",partition)), -c(sys2to1,sys3to1,sys3to2,sys4to1,sys4to2,sys4to3,sys5to1,sys5to2,sys5to3,sys5to4,sys6to1,sys6to2,sys6to3,sys6to4,sys6to5,sys7to1,sys7to2,sys7to3,sys7to4,sys7to5,sys7to6))
+#run and compare for multiple comparisons again
+cols <- names((dplyr::select(ungroup(main_unique),matches("system_segreg| mean_within_sys_ | mean_between_sys_|sys"))))
+m <- mclapply(cols, function(sys) {as.formula(paste(sys, covariates, sep=""))},mc.cores=2)
+#betas
+networks_Age_betas <- mclapply(m, function(sys) {summary(lm(formula = sys,data=main_unique))$coefficients[2,1]},mc.cores=1)
+networks_Age_betas <- as.data.frame(networks_Age_betas)
+networks_Age_betas <- t(networks_Age_betas)
+networks_Age_betas <- as.data.frame(networks_Age_betas)
+#pvals
+networks_Age_pvals <- mclapply(m, function(sys) { summary(lm(formula = sys,data=main_unique))$coefficients[2,4]},mc.cores=1)
+networks_Age_pvals <- as.data.frame(networks_Age_pvals)
+networks_Age_pvals <- t(networks_Age_pvals)
+networks_Age_pvals <- as.data.frame(networks_Age_pvals)
+#bonferroni correct
+networks_Age_pvals_fdr <- p.adjust(networks_Age_pvals$V1, method="fdr")
+networks_age_fdr <- data.frame(networks_Age_betas[,1],networks_Age_pvals,c("system_segreg","mean_within_sys","mean_between_sys",names(dplyr::select(ungroup(main_unique),sys1to1:sys7to7))))
+colnames(networks_age_fdr) <- c("beta","pvalue", "network")
+networks_age_fdr$partition <- rep(end, length(networks_age_fdr$beta))
+#FDR correction shows DMN to attentional networks and visual to dorsal attention is marginal.
+print(networks_age_fdr)
+assign(paste0("networks_age_fdr_",end), networks_age_fdr)
+i=i+1
+}
+
+#Plot the comparison
+full <- rbind(networks_age_fdr_yeo,networks_age_fdr_wsbm, networks_age_fdr_yeodev)
+dim(full)
+colnames(full)
+
+#reorder them to have the right order
+full$partition <- factor(full$partition,levels = ends)
+full$network <- factor(full$network, levels=c("system_segreg","mean_within_sys","mean_between_sys",names(dplyr::select(ungroup(main_unique),sys1to1:sys7to7))))
+ggplot(aes(x = partition, y = network, fill = beta), data=full)+geom_tile()+scale_fill_gradient2(low = ("lightblue"),
+                                                                                                 mid="white",high = "red", midpoint=0, limits=c(-0.021, 0.021))+theme_ipsum()+geom_text(aes(label=ifelse(pvalue<0.05, "*", ""))) 
+# Sex effects -------------------------------------------------------------
+yeo_measures=select(main_schaeferyeo7,one_of("age", "system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo"))
+wsbm_measures=select(main_schaeferwsbm,one_of("age", "system_segreg_wsbm","mean_within_sys_wsbm", "mean_between_sys_wsbm","modul_wsbm"))
+yeodev_measures=select(main_yeodev,one_of("age", "system_segreg_yeodev","mean_within_sys_yeodev", "mean_between_sys_yeodev"))
+
+par(mfrow=c(3,3))
+i=1
+for (meas in yeo_measures){
+  name=colnames(yeo_measures)[i]
+  i=i+1
+  p <- vioplot(meas~main_schaeferyeo7$gender, main=name) #gender
+}
+
+
 #####################################
 ########### TEST SAMPLE #########
 #####################################
@@ -275,6 +404,7 @@ main <- left_join(main, income, by=c("ID", "eventname"))
 main <- left_join(main, nihtbx, by=c("ID", "eventname"))
 main <- left_join(main, wiscv, by=c("ID", "eventname"))
 main <- left_join(main, taskfmri, by=c("ID", "eventname"))
+main <- left_join(main, recmem, by=c("ID", "eventname"))
 
 ##need to get XCP mean FD and # of outliers and control for that
 runs <- read.csv(paste0(subjlist_dir,'n544_filtered_runs_site14site20_postprocess.csv'))
@@ -308,6 +438,11 @@ main$site <- as.factor(main$site_id_l)
 #average nback face measures
 main$nback_2back_place_rate_correct <- main$tfmri_nb_all_beh_c2bp_rate #is rate of correct for 2-back places
 main$nback_2back_face_rate_correct <- (main$tfmri_nb_all_beh_c2bpf_rate+main$tfmri_nb_all_beh_c2bnf_rate+main$tfmri_nb_all_beh_c2bngf_rate)/3 #average together all the face rates
+#average dprime measures
+main$dprime_faces <- (main$tfmri_rec_all_beh_posf_dpr+main$tfmri_rec_all_beh_neutf_dp+main$tfmri_rec_all_beh_negf_dp)/3
+main$dprime_places <- main$tfmri_rec_all_beh_place_dp
+#take out the one outlier in dprime_faces
+main <- filter(main, dprime_faces > -3)
 
 main_schaeferyeo7 <- left_join(net_stats_schaeferyeo7, main, by="ID")
 main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
@@ -315,6 +450,13 @@ main_schaeferwsbm <- left_join(net_stats_schaeferwsbm, main, by="ID")
 main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
 main_yeodev<- left_join(net_stats_yeodev, main, by="ID")
 main_yeodev <- left_join(main_yeodev, qa, by="ID")
+
+#take out the one outlier in mean within_sys_conn
+main_schaeferyeo7 <- filter(main_schaeferyeo7, mean_within_sys_yeo < 0.6) 
+
+main_schaeferyeo7 <- filter(main_schaeferyeo7, ID != "sub-NDARINVJV77KDEJ")
+main_schaeferwsbm <- filter(main_schaeferwsbm, ID != "sub-NDARINVJV77KDEJ")
+main_yeodev <- filter(main_yeodev, ID != "sub-NDARINVJV77KDEJ")
 
 # Plot data descriptives --------------------------------------------------
 
@@ -335,19 +477,29 @@ for (meas in measures){
 }
 
 # Cognitive measures-------------------------------------------------------
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
-nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
+nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6", "sys5to7")
+nets=c("system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+site+', net))
     assign(name, lm(formula, data=main_schaeferyeo7))
     print(summary(get(name)))
+    print(lm.beta(get(name)))
   }
 }
+
+par(mfrow=c(3,4))
+for (net in nets){
+  visreg(get(paste0("lm_dprime_faces_",net)), net)
+  #avPlot(get(paste0("lm_dprime_faces_",net)), net)
+  #plot_model(get(paste0("lm_dprime_faces_",net)), terms = net, type="eff")
+}
+
 measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
 for (meas in measures){
   print(meas)
@@ -361,25 +513,33 @@ for (meas in measures){
 }
 
 #Schaefer400-WSBM
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
-nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
+nets=c("system_segreg_wsbm","mean_within_sys_wsbm", "mean_between_sys_wsbm","modul_wsbm")
+#nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+site+', net))
     assign(name, lm(formula, data=main_schaeferwsbm))
     print(summary(get(name)))
   }
 }
+
+for (net in nets){
+  visreg(get(paste0("lm_dprime_faces_",net)), net)
+  #avPlot(get(paste0("lm_dprime_faces_",net)), net)
+  #plot_model(get(paste0("lm_dprime_faces_",net)), terms = net, type="eff")
+}
+
 measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+site+', net))
     assign(name, lm(formula, data=main_schaeferwsbm_nback))
     print(summary(get(name)))
   }
@@ -388,26 +548,110 @@ for (meas in measures){
 visreg(lm_nback_2back_place_rate_correct_sys4to7)
 
 #Yeo-dev
-measures=c("nihtbx_list_uncorrected","pea_wiscv_tss")
+measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
+nets=c("system_segreg_yeodev","mean_within_sys_yeodev", "mean_between_sys_yeodev")
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to6")
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+site+', net))
     assign(name, lm(formula, data=main_yeodev))
     print(summary(get(name)))
   }
 }
+for (net in nets){
+  visreg(get(paste0("lm_dprime_faces_",net)), net)
+  #avPlot(get(paste0("lm_dprime_faces_",net)), net)
+  #plot_model(get(paste0("lm_dprime_faces_",net)), terms = net, type="eff")
+}
+
 measures=c("tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate", "nback_2back_place_rate_correct","nback_2back_face_rate_correct")
 for (meas in measures){
   print(meas)
   for (net in nets){
     print(net)
     name<-paste0("lm_", meas,"_",net)
-    formula<-formula(paste0(net,'~age+gender+fd_mean_avg+avgweight+site+', meas))
+    formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+avgweight+site+', net))
     assign(name, lm(formula, data=main_yeodev_nback))
     print(summary(get(name)))
   }
 }
+
+# Age effects-descriptive -------------------------------------------------------------
+yeo_measures=select(main_schaeferyeo7,one_of("age", "system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo"))
+wsbm_measures=select(main_schaeferwsbm,one_of("age", "system_segreg_wsbm","mean_within_sys_wsbm", "mean_between_sys_wsbm","modul_wsbm"))
+yeodev_measures=select(main_yeodev,one_of("age", "system_segreg_yeodev","mean_within_sys_yeodev", "mean_between_sys_yeodev"))
+
+par(mfrow=c(5,3))
+i=1
+for (meas in yeo_measures){
+  name=colnames(measures)[i]
+  hist(meas, main=name, col = "lightblue") #hist of measure
+  i=i+1
+  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
+}
+par(mfrow=c(3,5))
+for (meas in names(yeodev_measures)){
+  name=meas
+  print(meas)
+  name<-paste0("lm_", meas)
+  formula<-formula(paste0(meas,'~age+gender+fd_mean_avg+site+avgweight'))
+  assign(name, lm(formula, data=main_yeodev))
+  visreg(get(name), "age", main=meas)
+  print(summary(get(name)))
+}
+
+#plot each of them with each of the others
+chart.Correlation(yeo_measures)
+chart.Correlation(wsbm_measures)
+chart.Correlation(yeodev_measures)
+
+# Age and sex effects-comparison --------------------------------------------------
+# Make dataframes for each partitions with the strength of age effects and pvals!
+covariates="~age+gender+fd_mean_avg+site+avgweight" #to look at age
+covariates="~gender+age+fd_mean_avg+site+avgweight" #to look at sex
+
+
+partitions=c("schaeferyeo7","schaeferwsbm", "yeodev")
+ends=c("yeo", "wsbm", "yeodev")
+i=1
+for (partition in partitions){
+  end=ends[i]
+  main_unique <- dplyr::select(get(paste0("main_",partition)), -c(sys2to1,sys3to1,sys3to2,sys4to1,sys4to2,sys4to3,sys5to1,sys5to2,sys5to3,sys5to4,sys6to1,sys6to2,sys6to3,sys6to4,sys6to5,sys7to1,sys7to2,sys7to3,sys7to4,sys7to5,sys7to6))
+  #run and compare for multiple comparisons again
+  cols <- names((dplyr::select(ungroup(main_unique),matches("system_segreg| mean_within_sys_ | mean_between_sys_|sys"))))
+  m <- mclapply(cols, function(sys) {as.formula(paste(sys, covariates, sep=""))},mc.cores=2)
+  #betas
+  networks_Age_betas <- mclapply(m, function(sys) {summary(lm(formula = sys,data=main_unique))$coefficients[2,1]},mc.cores=1)
+  networks_Age_betas <- as.data.frame(networks_Age_betas)
+  networks_Age_betas <- t(networks_Age_betas)
+  networks_Age_betas <- as.data.frame(networks_Age_betas)
+  #pvals
+  networks_Age_pvals <- mclapply(m, function(sys) { summary(lm(formula = sys,data=main_unique))$coefficients[2,4]},mc.cores=1)
+  networks_Age_pvals <- as.data.frame(networks_Age_pvals)
+  networks_Age_pvals <- t(networks_Age_pvals)
+  networks_Age_pvals <- as.data.frame(networks_Age_pvals)
+  #bonferroni correct
+  networks_Age_pvals_fdr <- p.adjust(networks_Age_pvals$V1, method="fdr")
+  networks_age_fdr <- data.frame(networks_Age_betas[,1],networks_Age_pvals_fdr,c("system_segreg","mean_within_sys","mean_between_sys",names(dplyr::select(ungroup(main_unique),sys1to1:sys7to7))))
+  colnames(networks_age_fdr) <- c("beta","pvalue", "network")
+  networks_age_fdr$partition <- rep(end, length(networks_age_fdr$beta))
+  #FDR correction shows DMN to attentional networks and visual to dorsal attention is marginal.
+  print(networks_age_fdr)
+  assign(paste0("networks_age_fdr_",end), networks_age_fdr)
+  i=i+1
+}
+
+#Plot the comparison
+full <- rbind(networks_age_fdr_yeo,networks_age_fdr_wsbm, networks_age_fdr_yeodev)
+dim(full)
+colnames(full)
+
+#reorder them to have the right order
+full$partition <- factor(full$partition,levels = ends)
+full$network <- factor(full$network, levels=c("system_segreg","mean_within_sys","mean_between_sys",names(dplyr::select(ungroup(main_unique),sys1to1:sys7to7))))
+ggplot(aes(x = partition, y = network, fill = beta), data=full)+geom_tile()+scale_fill_gradient2(low = ("lightblue"),
+                                                                                                 mid="white",high = "red", midpoint=0, limits=c(-0.021, 0.021))+theme_ipsum()+geom_text(aes(label=ifelse(pvalue<0.05, "*", ""))) 

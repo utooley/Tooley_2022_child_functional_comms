@@ -31,3 +31,12 @@ save(fullfile(outdir,'cmap.mat'),'cm')
 %% Make an average vertex-wise connectivity matrix
 
 %maybe read in the gwMRF covariance matrix?
+load('/gpfs/fs001/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks/cmap.mat')
+load('/gpfs/fs001/cbica/projects/spatial_topography/data/imageData/fc_matrices/site14site20_test_sample/fsaverage6_full_corrmats/sub-NDARINV8EM420D1_fsaverage_corr_mat.mat')
+
+colormap(cm)
+imagesc(corr_mat)
+
+%% Make the ROI x corr profile matrix
+
+load('/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/resamplingk.mat')
