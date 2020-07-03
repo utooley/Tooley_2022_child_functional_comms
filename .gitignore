@@ -22,6 +22,7 @@ matlab/
 /data/wsbm
 /data/clustering/
 /data/subjects
+/data/task_maps/
 /docs
 /output
 **/.DS_Store
