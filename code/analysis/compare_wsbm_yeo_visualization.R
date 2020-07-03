@@ -23,6 +23,12 @@ library(R.matlab)
 library(stringr)
 library(ggplot2)
 library(tidyr)
+
+#rearrange the order of the brains in the T9 view of fsbrain
+source("~/Documents/tools/fsbrain_fix_t9.R")
+environment(brainview.t9) <- asNamespace('fsbrain')
+assignInNamespace("brainview.t9", brainview.t9, ns = "fsbrain")
+
 # SETUP -------------------------------------------------------------------
 #CUBIC cluster filepaths, mounted locally
 wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/"
@@ -66,6 +72,9 @@ rgloptions=list("windowRect"=c(50,50,1000,1000));
 #Change x=0, y=0, z=1, maybe rpm
 trace(fsbrain:::brainview.sr, edit=TRUE)
 
+#CHANGE THE ORDERING OF THE T4 and T9 PLOT BRAINS
+trace(fsbrain:::brainview.t9, edit=TRUE)
+#edit the order of the 4 or 9 views--figure out how to make this permanent!
 ##########################
 ####### PLOTTING #########
 ##########################
@@ -204,9 +213,10 @@ barplot(1:6,col=switch_colors(6))
 
 #Plot this vector of switches on fsaverage6 surface
 rgloptions=list("windowRect"=c(50,50,1000,1000));
-rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assignment.png"))
+rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assignment.png"), 'shift_hemis_apart'=list('min_dist'=20))
+makecmap_options=list('colFn'=switch_colors)
 vis.data.on.subject(subjects_dir, 'fsaverage6',switches_lh, switches_rh, 
-                    "inflated", colormap= switch_colors, views="t4", rgloptions = rgloptions, rglactions = rglactions)
+                     "inflated", views="t9", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
 
 # Number of vertices in Yeo7 vs Yeo-dev by community ----------------------------
 #Sum vertices in each hemisphere, these two have the same total # of vertices, in fsaverage6 space
@@ -571,7 +581,8 @@ rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assign
 vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  switches_lh, 
                              switches_rh, colormap=switch_colors, "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions)
 
-#Look at the switches in terms of % of vertices
+
+# Look at switches in community assignment from Yeo7 to WSBM in VE --------
 #copy WSBM annotation into local CBIG subjects dir
 get.atlas.region.names("wsbm.consensus.fsaverage6", template_subjects_dir = subjects_dir,template_subject='fsaverage6', hemi="rh");
 wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.consensus.fsaverage6')
@@ -607,9 +618,10 @@ barplot(1:7,col=switch_colors(7))
 
 #Plot this vector of switches on fsaverage6 surface
 rgloptions=list("windowRect"=c(50,50,1000,1000));
-rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assignment.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',switches_lh, 
-                    switches_rh, "inflated", colormap=switch_colors, views="t4", rglactions = rglactions,rgloptions = rgloptions)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"switches_in_assignment.png"), 'shift_hemis_apart'=list('min_dist'=20))
+makecmap_options=list('colFn'=switch_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage6',switches_lh, switches_rh, 
+                    "inflated", views="t9", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_annotation.png"))
 vis.subject.annot(subjects_dir, 'fsaverage6', 'wsbm.consensus.fsaverage6', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions);
