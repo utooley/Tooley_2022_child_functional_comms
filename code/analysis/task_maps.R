@@ -11,6 +11,7 @@ library(R.matlab)
 library(stringr)
 library(ggplot2)
 library(tidyr)
+library(data.table)
 
 #rearrange the order of the brains in the T9 view of fsbrain
 source("~/Documents/tools/fsbrain_fix_t9.R")
@@ -120,26 +121,186 @@ vis.data.on.subject(subjects_dir, 'fsaverage6', lh_mid_feedback_loss_posneg, rh_
                     rgloptions = rgloptions, draw_colorbar = TRUE)
 
 # Make a default system conjunction map -----------------------------------
-
+# MID_antic_loss_vs_neutral_dat_cohen_c1.dscalar.nii, MID_antic_reward_vs_neutral_dat_cohen_c1.dscalar.nii for MID and then overlap with 2 vs 0 nback.
 #Take the bottom 20% of vertices for each map
 nback_2_vs_0_bin <- rep(0, length(nback_2_vs_0_perf))
 nback_2_vs_0_bin[nback_2_vs_0_perf<quantile(nback_2_vs_0_perf, probs = 0.20)] <- 1
 
-mid_largewin_vs_neut_bin <- rep(0, length(mid_largewin_vs_neut))
-mid_largewin_vs_neut_bin[mid_largewin_vs_neut<quantile(mid_largewin_vs_neut , probs = 0.20)] <- 1
+mid_ant_loss_bin <- rep(0, length(mid_ant_loss))
+mid_ant_loss_bin[mid_ant_loss<quantile(mid_ant_loss , probs = 0.20)] <- 1
 
-sst_crct_stop_vs_failed_bin <- rep(0, length(sst_crct_stop_vs_failed))
-sst_crct_stop_vs_failed_bin[sst_crct_stop_vs_corr_go>quantile(sst_crct_stop_vs_corr_go, probs = 0.80)] <- 1
+mid_ant_win_bin <- rep(0, length(mid_ant_win))
+mid_ant_win_bin[mid_ant_win<quantile(mid_ant_win , probs = 0.20)] <- 1
 
-#Overlay where they overlap.
-dmn_min <- nback_2_vs_0_bin+mid_largewin_vs_neut_bin+sst_crct_stop_vs_failed_bin
+#Overlay MID two maps
+mid_ant_loss_win_overlap=mid_ant_loss_bin+mid_ant_win_bin
+hist(mid_ant_loss_win_overlap)
+overlap_colors=colorRampPalette(c("lightgray", "lightpink", "red"))
+makecmap_options=list('colFn'=overlap_colors, 'n'=3)
+vis.data.on.subject(subjects_dir, 'fsaverage6',mid_ant_loss_win_overlap[0:40962], mid_ant_loss_win_overlap[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
+#Try with continuous MID data and then bottom 20% of the summed data
+mid_ant_loss_win_cont <- scale(mid_ant_win)+scale(mid_ant_loss)
+mid_ant_loss_win_cont_bin<- rep(0, length(mid_ant_loss_win_cont))
+mid_ant_loss_win_cont_bin[mid_ant_loss_win_cont<quantile(mid_ant_loss_win_cont, probs = 0.20)] <- 1
+dmn_min <- nback_2_vs_0_bin+mid_ant_loss_win_cont_bin
+
+#where they overlap.
+dmn_min <- nback_2_vs_0_bin+mid_ant_loss_win_overlap
 hist(dmn_min)
 
 #Look at this overlap
-overlap_colors=colorRampPalette(c("lightgray", "lightpink", "red", "darkred"))
+overlap_colors=colorRampPalette(c("lightgray", "lightgray", "lightgray", "darkred"))
 makecmap_options=list('colFn'=overlap_colors, 'n'=4)
 vis.data.on.subject(subjects_dir, 'fsaverage6',dmn_min[0:40962], dmn_min[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, draw_colorbar = TRUE)
+
+# Make a frontoparietal system conjunction map -----------------------------------
+#Just take top of nback 2 vs 0
+nback_2_vs_0_top <- rep(0, length(nback_2_vs_0_perf))
+nback_2_vs_0_top[nback_2_vs_0_perf>quantile(nback_2_vs_0_perf, probs = 0.90)] <- 1
+#Look at this
+overlap_colors=colorRampPalette(c("lightgray", "darkred"))
+makecmap_options=list('colFn'=overlap_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage6',nback_2_vs_0_top[0:40962], nback_2_vs_0_top[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
+
+# Make a limbic system conjunction map -----------------------------------
+#Take MID feedback, reward pos vs. negative.
+mid_feedback_win_pos_vs_neg_bin <- rep(0, length(mid_feedback_win_pos_vs_neg))
+mid_feedback_win_pos_vs_neg_bin[mid_feedback_win_pos_vs_neg > quantile(mid_feedback_win_pos_vs_neg, probs = 0.80)] <- 1
+#Look at this
+overlap_colors=colorRampPalette(c("lightgray", "darkred"))
+makecmap_options=list('colFn'=overlap_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage6',mid_feedback_win_pos_vs_neg_bin[0:40962], mid_feedback_win_pos_vs_neg_bin[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
+###################################
+########## COMPARE TO PARTITIONS ######
+###################################
+#Yeo adult
+#other alternative is read in the Freesurfer version of Yeo7 in  fsaverage6 space
+#this is more theoretically motivated, because this is how Yeo-dev was generated
+subjects_dir = "/Users/utooley/Documents/tools/parcellations/Yeo_from_freesurfer/";
+lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','Yeo2011_7Networks_N1000' )
+yeo7_lh <- as.numeric(str_split(lh$label_names, "_", simplify = TRUE)[,2])
+yeo7_lh[is.na(yeo7_lh)] <- 0
+rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','Yeo2011_7Networks_N1000' )
+yeo7_rh <- as.numeric(str_split(rh$label_names, "_", simplify = TRUE)[,2])
+yeo7_rh[is.na(yeo7_rh)] <- 0
+yeo7 <- c(yeo7_lh,yeo7_rh)
+
+#Yeo dev
+yeo_dev_lh <- yeo_dev_partition$lh.labels
+yeo_dev_rh <- yeo_dev_partition$rh.labels
+yeo_dev <- c(yeo_dev_lh,yeo_dev_rh)
+
+#WSBM but in fsaverage6 space
+#copy WSBM annotation into local CBIG subjects dir
+get.atlas.region.names("wsbm.consensus.fsaverage6", template_subjects_dir = subjects_dir,template_subject='fsaverage6', hemi="rh");
+wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.consensus.fsaverage6')
+wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
+wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.consensus.fsaverage6')
+wsbm_lh<- as.numeric(as.character(wsbm_lh$label_names))
+wsbm <- c(wsbm_lh,wsbm_rh)
+
+# Tally partition assignments-FP ---------------------------------------------
+library(igraph);library(aricode)
+partitions=cbind(yeo7, yeo_dev, wsbm)
+names=c("yeo7", "yeo_dev", "wsbm")
+for (i in 1:3){
+  partition=partitions[,i]
+  v <- partition[nback_2_vs_0_top==1]
+  assign(paste0(names[i], "_FP_tally_vertices"), as.data.frame(table(v)))
+}
+
+vertices <- merge(wsbm_FP_tally_vertices, yeo_dev_FP_tally_vertices,by="v",all.x = T, suffixes = c("wsbm", "yeo_dev"))
+#surf_area <- merge(surf_area, yeo7_FP_tally_vertices,by="v",all.x = T) Add in Yeo7 or not
+#colnames(surf_area) <- c("community", "yeodev", "wsbm","yeo7" )
+colnames(vertices) <- c("community", "yeodev", "wsbm")
+longdata <- vertices %>% melt()
+#sum of all diff surf areas is the same
+ggplot(data=longdata, aes(x=community, y= value))+geom_bar(stat="identity", aes(fill = variable), position = "dodge")+labs(y="Number of vertices")+theme(axis.text.x=element_text(angle=90,hjust=1))+scale_fill_manual(values=yeo_colors(3))
+
+#Compare with statistics!
+wsbm_6 =ifelse(wsbm==6,1,0)
+yeo_dev_6=ifelse(yeo_dev==6,2,0)
+yeo7_6=ifelse(yeo7==6,1,0)#about the same as yeo_dev
+c1 <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
+c2 <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(c1,c2)
+#these seem contradictory with vertices....it's because WSBM could just have more vertices to FPN overall, but the pattern of FPN doesn't match better.
+
+#PLOT IT
+nback_2_vs_0_top[nback_2_vs_0_top==3] <- 6
+total <- wsbm_6+yeo_dev_6+nback_2_vs_0_top
+hist(total)
+#Each color has a different WSBM=1, Yeo=2, nback=6, nback+WSBM=7, nback+yeo=8, all=9
+overlap_colors=colorRampPalette(c("lightgray", "aquamarine", "cadetblue1", "cyan", "lightgray", "lightgray", "orange", "gold4", "gold2", "darkslateblue"), )
+makecmap_options=list('colFn'=overlap_colors, 'n'=10)
+vis.data.on.subject(subjects_dir, 'fsaverage6',total[0:40962], total[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
+# Tally partition assignments-Limbic ---------------------------------------------
+library(igraph);library(aricode)
+partitions=cbind(yeo7, yeo_dev, wsbm)
+names=c("yeo7", "yeo_dev", "wsbm")
+mid_feedback_win_pos_vs_neg_bin
+
+#Compare with statistics!
+wsbm_5 =ifelse(wsbm==5,1,0)
+yeo_dev_5=ifelse(yeo_dev==5,2,0)
+yeo7_5=ifelse(yeo7==5,1,0)#about the same as yeo_dev
+c1 <- mclustcomp(wsbm_5,mid_feedback_win_pos_vs_neg_bin, types = c("jaccard", "sdc")) #for binary vectors
+c2 <- mclustcomp(yeo_dev_5,mid_feedback_win_pos_vs_neg_bin,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(c1,c2)
+#these seem contradictory with vertices....it's because WSBM could just have more vertices to FPN overall, but the pattern of FPN doesn't match better.
+
+#PLOT IT
+mid_feedback_win_pos_vs_neg_bin[mid_feedback_win_pos_vs_neg_bin==1] <- 6
+total <- wsbm_5+yeo_dev_5+mid_feedback_win_pos_vs_neg_bin
+hist(total)
+#Each color has a different WSBM=1, Yeo=2, nback=6, nback+WSBM=7, nback+yeo=8, all=9
+overlap_colors=colorRampPalette(c("lightgray", "aquamarine", "cadetblue1", "cyan", "lightgray", "lightgray", "orange", "gold4", "gold2", "darkslateblue"), )
+makecmap_options=list('colFn'=overlap_colors, 'n'=10)
+vis.data.on.subject(subjects_dir, 'fsaverage6',total[0:40962], total[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
+# Tally partition assignments-DMN ---------------------------------------------
+library(igraph);library(aricode)
+partitions=cbind(yeo7, yeo_dev, wsbm)
+names=c("yeo7", "yeo_dev", "wsbm")
+# DMN binary
+#MID 20% overlap with n-back, binarized
+mid_ant_loss_win_overlap=mid_ant_loss_bin+mid_ant_win_bin
+dmn_min <- nback_2_vs_0_bin+mid_ant_loss_win_overlap
+dmn_bin <- ifelse(dmn_min==3,1,0)
+
+#alt DMN 
+# dmn_min <- nback_2_vs_0_bin+mid_ant_loss_win_cont_bin
+# dmn_bin <- ifelse(dmn_min==2,1,0)
+
+#Compare with statistics!
+wsbm_7 =ifelse(wsbm==7,1,0)
+yeo_dev_7=ifelse(yeo_dev==7,2,0)
+yeo7_7=ifelse(yeo7==7,1,0) #about the same as yeo_dev
+c1 <- mclustcomp(wsbm_7,dmn_bin, types = c("jaccard", "sdc")) #for binary vectors
+c2 <- mclustcomp(yeo_dev_7,dmn_bin,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(c1,c2)
+#these seem contradictory with vertices....it's because WSBM could just have more vertices to FPN overall, but the pattern of FPN doesn't match better.
+
+#PLOT IT
+dmn_bin[dmn_bin==1] <- 6
+total <- wsbm_7+yeo_dev_7+dmn_bin
+hist(total)
+#Each color has a different WSBM=1, Yeo=2, nback=6, nback+WSBM=7, nback+yeo=8, all=9
+overlap_colors=colorRampPalette(c("lightgray", "aquamarine", "cadetblue1", "cyan", "lightgray", "lightgray", "orange", "gold4", "gold2", "darkslateblue"), )
+makecmap_options=list('colFn'=overlap_colors, 'n'=10)
+vis.data.on.subject(subjects_dir, 'fsaverage6',total[0:40962], total[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
 
 ##########################
 ####### PLOTTING #########
