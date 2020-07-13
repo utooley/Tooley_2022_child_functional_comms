@@ -117,14 +117,14 @@ sst_crct_stop_vs_corr_go <- c(lh_sst_corr_stop_vs_corr_go,rh_sst_corr_stop_vs_co
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
 makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
-vis.data.on.subject(subjects_dir, 'fsaverage6', lh_mid_feedback_loss_posneg, rh_mid_feedback_loss_posneg, "inflated", views="t4", makecmap_options = makecmap_options,
+vis.data.on.subject(subjects_dir, 'fsaverage6', l, rh_mid_feedback_loss_posneg, "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, draw_colorbar = TRUE)
 
 # Make a default system conjunction map -----------------------------------
 # MID_antic_loss_vs_neutral_dat_cohen_c1.dscalar.nii, MID_antic_reward_vs_neutral_dat_cohen_c1.dscalar.nii for MID and then overlap with 2 vs 0 nback.
 #Take the bottom 20% of vertices for each map
 nback_2_vs_0_bin <- rep(0, length(nback_2_vs_0_perf))
-nback_2_vs_0_bin[nback_2_vs_0_perf<quantile(nback_2_vs_0_perf, probs = 0.20)] <- 1
+nback_2_vs_0_bin[nback_2_vs_0_perf<quantile(nback_2_vs_0_perf, probs = 0.30)] <- 1
 
 mid_ant_loss_bin <- rep(0, length(mid_ant_loss))
 mid_ant_loss_bin[mid_ant_loss<quantile(mid_ant_loss , probs = 0.20)] <- 1
@@ -137,7 +137,8 @@ mid_ant_loss_win_overlap=mid_ant_loss_bin+mid_ant_win_bin
 hist(mid_ant_loss_win_overlap)
 overlap_colors=colorRampPalette(c("lightgray", "lightpink", "red"))
 makecmap_options=list('colFn'=overlap_colors, 'n'=3)
-vis.data.on.subject(subjects_dir, 'fsaverage6',mid_ant_loss_win_overlap[0:40962], mid_ant_loss_win_overlap[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+vis.data.on.subject(subjects_dir, 'fsaverage6',mid_ant_loss_bin[0:40962], mid_ant_loss_bin
+                    [40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, draw_colorbar = TRUE)
 
 #Try with continuous MID data and then bottom 20% of the summed data

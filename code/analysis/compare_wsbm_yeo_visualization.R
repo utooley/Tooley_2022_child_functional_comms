@@ -410,11 +410,12 @@ silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40
 silhouette_rh_dev <-  yeo_dev_partition$rh.s
 silhouette_lh_dev <- silhouette_lh_yeo7
 silhouette_rh_dev <- silhouette_rh_yeo7
-silhouette_dev <- c(silhouette_lh_dev,silhouette_rh_dev)
+silhouette_dev <- c(silhouette_lh_dev,silhouette_rh_dev) 
 yeo7 <- c(yeo7_lh, yeo7_rh)
 data <- data.frame(silhouette_dev, as.character(yeo7))
 data <- data[data$as.character.yeo7 != "0",]#remove the medial wall
 colnames(data) <- c("silhouette", "yeo7")
+data <- data %>% filter(silhouette!=1) #remove the 1's for silhouette around the medial wall
 
 ## Raincloud plot
 lb <- function(x) mean(x) - sd(x)
@@ -452,6 +453,7 @@ yeodev <- c(yeo_dev_lh, yeo_dev_rh)
 data <- data.frame(silhouette_dev, as.character(yeodev))
 data <- data[data$as.character.yeodev. != "0",]#remove the medial wall
 colnames(data) <- c("silhouette", "yeodev")
+data <- data %>% filter(silhouette!=1) #remove the 1's for silhouette around the medial wall
 
 ## Raincloud plot
 lb <- function(x) mean(x) - sd(x)
@@ -702,6 +704,19 @@ freq<- t(z$freq)
 freq_continuous <- abs(freq-670) #change into the number of non-modal assignments out of 670
 data <- data.frame(yeo_nodes,freq_continuous)
 colnames(data) <- c('yeo7', 'freq')
+
+#Do it by VERTEX instead
+subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
+get.atlas.region.names("wsbm.consensus.fsaverage6", template_subjects_dir = subjects_dir,template_subject='fsaverage6', hemi="rh");
+wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.freq.fsaverage6')
+wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
+wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.freq.fsaverage6')
+wsbm_lh<- as.numeric(as.character(wsbm_lh$label_names))
+yeo7 <- c(yeo7_lh,yeo7_rh)
+freq <- c(wsbm_lh, wsbm_rh)
+data <- data.frame(as.character(yeo7),freq)
+colnames(data) <- c('yeo7', 'freq')
+data <- data[data$yeo7 != "0",]#remove the medial wall
 
 ## Raincloud plot
 lb <- function(x) mean(x) - sd(x)
