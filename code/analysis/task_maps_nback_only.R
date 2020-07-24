@@ -134,7 +134,7 @@ vis.data.on.subject(subjects_dir, 'fsaverage6',nback_2_vs_0_bottom[0:40962], nba
 # Make a frontoparietal system conjunction map -----------------------------------
 #Just take top of nback 2 vs 0
 nback_2_vs_0_top <- rep(0, length(nback_2_vs_0_perf))
-nback_2_vs_0_top[nback_2_vs_0_perf>quantile(nback_2_vs_0_perf, probs = 0.90)] <- 1
+nback_2_vs_0_top[nback_2_vs_0_perf>quantile(nback_2_vs_0_perf, probs = 0.80)] <- 1
 #Look at this
 overlap_colors=colorRampPalette(c("lightgray", "darkred"))
 makecmap_options=list('colFn'=overlap_colors)
@@ -183,7 +183,6 @@ yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccar
 yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
 cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
 
-
 ##### Sum of betas within the system ####
 yeo7_7_betas <- ifelse(yeo7_7==1, nback_2_vs_0_perf, 0)
 yeo_dev_7_betas <- ifelse(yeo_dev_7==1, nback_2_vs_0_perf, 0)
@@ -204,6 +203,7 @@ data <- data.frame(yeo7_7_betas, yeo_dev_7_betas, wsbm_7_betas)
 colnames(data) <- c('yeo7', 'yeo_dev', 'wsbm')
 longdata <- melt(data)
 longdata <- longdata[longdata$value != 0.0000000,]#remove the medial wall
+longdata <- longdata[longdata$value < 0,]#look at what is most negative and not least positive
 colnames(longdata) <- c('partition', 'betas')
 
 ## Raincloud plot
@@ -266,6 +266,7 @@ data <- data.frame(yeo7_6_betas, yeo_dev_6_betas, wsbm_6_betas)
 colnames(data) <- c('yeo7', 'yeo_dev', 'wsbm')
 longdata <- melt(data)
 longdata <- longdata[longdata$value != 0.0000000,]#remove the medial wall
+longdata <- longdata[longdata$value > 0,]#remove the medial wall
 colnames(longdata) <- c('partition', 'betas')
 
 ## Raincloud plot
@@ -296,116 +297,212 @@ pairwise.wilcox.test(longdata$betas, longdata$partition,
 #need to take out 0's here
 wilcox.test(data$yeo7,data$yeo_dev)
 
+#########################
+# HCP Adult N-back Task Map #
+###########################
+## HCP -----------------------------------------------
+hcp_task_maps="/cbica/projects/spatial_topography/data/imageData/task_maps/hcp_group_task_maps/"
+#FIRST NEED TO CONVERT TO FSAVERAGE OUTSIDE OF R WITH THE SCRIPT transform_task_maps_to_fsaverage.sh, then read in
+#Only interested in the nback 2 vs 0, which is contrast 11 in this file (from looking in connectome wb)
+lh_nback <- read.fs.morph.gii(paste0(hcp_task_maps,"HCP_S1200_997_tfMRI_ALLTASKS_level2_cohensd_hp200_s2_MSMAll..lh.41k_fsavg_L.func.gii"), element_index = 11L)
+rh_nback <- read.fs.morph.gii(paste0(hcp_task_maps,"HCP_S1200_997_tfMRI_ALLTASKS_level2_cohensd_hp200_s2_MSMAll..rh.41k_fsavg_R.func.gii"), element_index = 11L)
+nback_2_vs_0_perf <- c(lh_nback,rh_nback)
 
+#Sanity check of plotting
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list('shift_hemis_apart'=list('min_dist'=100))
+colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
+makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'= TRUE)
+vis.data.on.subject(subjects_dir, 'fsaverage6',lh_nback, rh_nback, "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
 
+# Make a default system conjunction map -----------------------------------
+# Just take bottom 20% of nback
+nback_2_vs_0_bottom <- rep(0, length(nback_2_vs_0_perf))
+nback_2_vs_0_bottom[nback_2_vs_0_perf<quantile(nback_2_vs_0_perf, probs = 0.20)] <- 1
 
-
-
-partitions=cbind(yeo7, yeo_dev, wsbm)
-names=c("yeo7", "yeo_dev", "wsbm")
-for (i in 1:3){
-  partition=partitions[,i]
-  v <- partition[nback_2_vs_0_top==1]
-  assign(paste0(names[i], "_FP_tally_vertices"), as.data.frame(table(v)))
-}
-
-vertices <- merge(wsbm_FP_tally_vertices, yeo_dev_FP_tally_vertices,by="v",all.x = T, suffixes = c("wsbm", "yeo_dev"))
-#surf_area <- merge(surf_area, yeo7_FP_tally_vertices,by="v",all.x = T) Add in Yeo7 or not
-#colnames(surf_area) <- c("community", "yeodev", "wsbm","yeo7" )
-colnames(vertices) <- c("community", "yeodev", "wsbm")
-longdata <- vertices %>% melt()
-#sum of all diff surf areas is the same
-ggplot(data=longdata, aes(x=community, y= value))+geom_bar(stat="identity", aes(fill = variable), position = "dodge")+labs(y="Number of vertices")+theme(axis.text.x=element_text(angle=90,hjust=1))+scale_fill_manual(values=yeo_colors(3))
-
-#Compare with statistics!
-wsbm_6 =ifelse(wsbm==6,1,0)
-yeo_dev_6=ifelse(yeo_dev==6,2,0)
-yeo7_6=ifelse(yeo7==6,1,0)#about the same as yeo_dev
-c1 <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
-c2 <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
-cbind(c1,c2)
-#these seem contradictory with vertices....it's because WSBM could just have more vertices to FPN overall, but the pattern of FPN doesn't match better.
-
-#PLOT IT
-nback_2_vs_0_top[nback_2_vs_0_top==3] <- 6
-total <- wsbm_6+yeo_dev_6+nback_2_vs_0_top
-hist(total)
-#Each color has a different WSBM=1, Yeo=2, nback=6, nback+WSBM=7, nback+yeo=8, all=9
-overlap_colors=colorRampPalette(c("lightgray", "aquamarine", "cadetblue1", "cyan", "lightgray", "lightgray", "orange", "gold4", "gold2", "darkslateblue"), )
-makecmap_options=list('colFn'=overlap_colors, 'n'=10)
-vis.data.on.subject(subjects_dir, 'fsaverage6',total[0:40962], total[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+#Look at this overlap
+overlap_colors=colorRampPalette(c("lightgray", "darkred"))
+makecmap_options=list('colFn'=overlap_colors, 'n'=4)
+vis.data.on.subject(subjects_dir, 'fsaverage6',nback_2_vs_0_bottom[0:40962], nback_2_vs_0_bottom[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+# Make a frontoparietal system conjunction map -----------------------------------
+#Just take top of nback 2 vs 0
+nback_2_vs_0_top <- rep(0, length(nback_2_vs_0_perf))
+nback_2_vs_0_top[nback_2_vs_0_perf>quantile(nback_2_vs_0_perf, probs = 0.80)] <- 1
+#Look at this
+overlap_colors=colorRampPalette(c("lightgray", "darkred"))
+makecmap_options=list('colFn'=overlap_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage6',nback_2_vs_0_top[0:40962], nback_2_vs_0_top[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, draw_colorbar = TRUE)
 
-# Tally partition assignments-Limbic ---------------------------------------------
+###################################
+########## COMPARE TO PARTITIONS ######
+###################################
+#Yeo adult
+#other alternative is read in the Freesurfer version of Yeo7 in  fsaverage6 space
+#this is more theoretically motivated, because this is how Yeo-dev was generated
+subjects_dir = "/Users/utooley/Documents/tools/parcellations/Yeo_from_freesurfer/";
+lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','Yeo2011_7Networks_N1000' )
+yeo7_lh <- as.numeric(str_split(lh$label_names, "_", simplify = TRUE)[,2])
+yeo7_lh[is.na(yeo7_lh)] <- 0
+rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','Yeo2011_7Networks_N1000' )
+yeo7_rh <- as.numeric(str_split(rh$label_names, "_", simplify = TRUE)[,2])
+yeo7_rh[is.na(yeo7_rh)] <- 0
+yeo7 <- c(yeo7_lh,yeo7_rh)
+
+#Yeo dev
+yeo_dev_lh <- yeo_dev_partition$lh.labels
+yeo_dev_rh <- yeo_dev_partition$rh.labels
+yeo_dev <- c(yeo_dev_lh,yeo_dev_rh)
+
+#WSBM but in fsaverage6 space
+#copy WSBM annotation into local CBIG subjects dir
+get.atlas.region.names("wsbm.consensus.fsaverage6", template_subjects_dir = subjects_dir,template_subject='fsaverage6', hemi="rh");
+wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.consensus.fsaverage6')
+wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
+wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.consensus.fsaverage6')
+wsbm_lh<- as.numeric(as.character(wsbm_lh$label_names))
+wsbm <- c(wsbm_lh,wsbm_rh)
+
+# Compare partition assignments-Default ---------------------------------------------
 library(igraph);library(aricode);library(mclustcomp)
-partitions=cbind(yeo7, yeo_dev, wsbm)
-names=c("yeo7", "yeo_dev", "wsbm")
-mid_feedback_win_pos_vs_neg_bin
 
-#Compare with statistics!
-wsbm_5 =ifelse(wsbm==5,1,0)
-yeo_dev_5=ifelse(yeo_dev==5,2,0)
-yeo7_5=ifelse(yeo7==5,1,0)#about the same as yeo_dev
-c1 <- mclustcomp(wsbm_5,mid_feedback_win_pos_vs_neg_bin, types = c("jaccard", "sdc")) #for binary vectors
-c2 <- mclustcomp(yeo_dev_5,mid_feedback_win_pos_vs_neg_bin,  types = c("jaccard", "sdc")) #for binary vectors
-cbind(c1,c2)
-#these seem contradictory with vertices....it's because WSBM could just have more vertices to FPN overall, but the pattern of FPN doesn't match better.
-
-#PLOT IT
-mid_feedback_win_pos_vs_neg_bin[mid_feedback_win_pos_vs_neg_bin==1] <- 6
-total <- wsbm_5+yeo_dev_5+mid_feedback_win_pos_vs_neg_bin
-hist(total)
-#Each color has a different WSBM=1, Yeo=2, nback=6, nback+WSBM=7, nback+yeo=8, all=9
-overlap_colors=colorRampPalette(c("lightgray", "aquamarine", "cadetblue1", "cyan", "lightgray", "lightgray", "orange", "gold4", "gold2", "darkslateblue"), )
-makecmap_options=list('colFn'=overlap_colors, 'n'=10)
-vis.data.on.subject(subjects_dir, 'fsaverage6',total[0:40962], total[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
-                    rgloptions = rgloptions, draw_colorbar = TRUE)
-
-# Tally partition assignments-DMN ---------------------------------------------
-library(igraph);library(aricode)
-partitions=cbind(yeo7, yeo_dev, wsbm)
-names=c("yeo7", "yeo_dev", "wsbm")
-# DMN binary
-#MID 20% overlap with n-back, binarized
-mid_ant_loss_win_overlap=mid_ant_loss_bin+mid_ant_win_bin
-dmn_min <- nback_2_vs_0_bin+mid_ant_loss_win_overlap
-dmn_bin <- ifelse(dmn_min==3,1,0)
-
-#alt DMN 
-# dmn_min <- nback_2_vs_0_bin+mid_ant_loss_win_cont_bin
-# dmn_bin <- ifelse(dmn_min==2,1,0)
-
-#Compare with statistics!
+#Just binary overlap, Dice coefficient
 wsbm_7 =ifelse(wsbm==7,1,0)
-yeo_dev_7=ifelse(yeo_dev==7,2,0)
-yeo7_7=ifelse(yeo7==7,1,0) #about the same as yeo_dev
-c1 <- mclustcomp(wsbm_7,dmn_bin, types = c("jaccard", "sdc")) #for binary vectors
-c2 <- mclustcomp(yeo_dev_7,dmn_bin,  types = c("jaccard", "sdc")) #for binary vectors
-cbind(c1,c2)
-#these seem contradictory with vertices....it's because WSBM could just have more vertices to FPN overall, but the pattern of FPN doesn't match better.
+yeo_dev_7=ifelse(yeo_dev==7,1,0)
+yeo7_7=ifelse(yeo7==7,1,0)#about the same as yeo_dev
 
-#PLOT IT
-dmn_bin[dmn_bin==1] <- 6
-total <- wsbm_7+yeo_dev_7+dmn_bin
-hist(total)
-#Each color has a different WSBM=1, Yeo=2, nback=6, nback+WSBM=7, nback+yeo=8, all=9
-overlap_colors=colorRampPalette(c("lightgray", "aquamarine", "cadetblue1", "cyan", "lightgray", "lightgray", "orange", "gold4", "gold2", "darkslateblue"), )
-makecmap_options=list('colFn'=overlap_colors, 'n'=10)
-vis.data.on.subject(subjects_dir, 'fsaverage6',total[0:40962], total[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+wsbm_to_nback <- mclustcomp(wsbm_7,nback_2_vs_0_bottom, types = c("jaccard", "sdc")) #for binary vectors
+yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
+yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
+
+##### Sum of betas within the system ####
+yeo7_7_betas <- ifelse(yeo7_7==1, nback_2_vs_0_perf, 0)
+yeo_dev_7_betas <- ifelse(yeo_dev_7==1, nback_2_vs_0_perf, 0)
+wsbm_7_betas <- ifelse(wsbm_7==1, nback_2_vs_0_perf, 0)
+
+#Sanity check of plotting
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
+makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
+vis.data.on.subject(subjects_dir, 'fsaverage6', wsbm_7_betas[0:40962], wsbm_7_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, draw_colorbar = TRUE)
+
+##########################
+####### PLOTTING #########
+##########################
+
+data <- data.frame(yeo7_7_betas, yeo_dev_7_betas, wsbm_7_betas)
+colnames(data) <- c('yeo7', 'yeo_dev', 'wsbm')
+longdata <- melt(data)
+longdata <- longdata[longdata$value != 0.0000000,]#remove the medial wall
+longdata <- longdata[longdata$value < 0,]#look at what is most negative and not least positive
+colnames(longdata) <- c('partition', 'betas')
+
+## Raincloud plot
+source("~/Documents/tools/raincloud.R")
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+sumld<- ddply(longdata, ~partition, summarise, mean = mean(freq), median = median(freq), lower = lb(freq), upper = ub(freq))
+
+head(sumld)
+g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = partition)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = betas, color = partition), position = position_jitter(width = .15), size = .3, alpha = 0.5) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values=c("lightgreen", "lightblue", "purple")) +
+  scale_fill_manual(values= c("lightgreen", "lightblue", "purple")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+
+g
+
+#Stats
+kruskal.test(betas~partition, data = longdata)
+pairwise.wilcox.test(longdata$betas, longdata$partition,
+                     p.adjust.method = "bonferroni")
+
+# Compare partition assignments-Frontoparietal---------------------------------------------
+library(igraph);library(aricode);library(mclustcomp)
+
+#Just binary overlap, Dice coefficient
+wsbm_6 =ifelse(wsbm==6,1,0)
+yeo_dev_6=ifelse(yeo_dev==6,1,0)
+yeo7_6=ifelse(yeo7==6,1,0)#about the same as yeo_dev
+
+wsbm_to_nback <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
+yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
+yeo_adult_to_nback <-  mclustcomp(yeo7_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
+
+##### Sum of betas within the system ####
+yeo7_6_betas <- ifelse(yeo7_6==1, nback_2_vs_0_perf, 0)
+yeo_dev_6_betas <- ifelse(yeo_dev_6==1, nback_2_vs_0_perf, 0)
+wsbm_6_betas <- ifelse(wsbm_6==1, nback_2_vs_0_perf, 0)
+
+#Sanity check of plotting
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
+makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
+vis.data.on.subject(subjects_dir, 'fsaverage6', wsbm_6_betas[0:40962],wsbm_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, draw_colorbar = TRUE)
+
+##########################
+####### PLOTTING #########
+##########################
+
+data <- data.frame(yeo7_6_betas, yeo_dev_6_betas, wsbm_6_betas)
+colnames(data) <- c('yeo7', 'yeo_dev', 'wsbm')
+longdata <- melt(data)
+longdata <- longdata[longdata$value != 0.0000000,]#remove the medial wall
+longdata <- longdata[longdata$value > 0,]#remove the medial wall
+colnames(longdata) <- c('partition', 'betas')
+
+## Raincloud plot
+source("~/Documents/tools/raincloud.R")
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+
+g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = partition)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = betas, color = partition), position = position_jitter(width = .15), size = .3, alpha = 0.5) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values=c("lightgreen", "lightblue", "purple")) +
+  scale_fill_manual(values= c("lightgreen", "lightblue", "purple")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+
+g
+
+#Stats
+kruskal.test(betas~partition, data = longdata)
+pairwise.wilcox.test(longdata$betas, longdata$partition,
+                     p.adjust.method = "bonferroni")
+
 
 
 # Unneeded gifti brainstorming --------------------------------------------
-
+library(gifti)
+library(cifti)
 #read gifti
-left_gii <- readgii("/Users/utooley/Dropbox/projects/in_progress/arun_fc_metrics_motion/docs/Motion_FunctionalConnectivity/manuscript/Figure4/S1200.L.inflated_MSMAll.32k_fs_LR.surf.gii")
-right_gii <- readgii("/Users/utooley/Dropbox/projects/in_progress/arun_fc_metrics_motion/docs/Motion_FunctionalConnectivity/manuscript/Figure4/S1200.R.inflated_MSMAll.32k_fs_LR.surf.gii")
+left_gii <- readgii("/Users/utooley/Documents/projects/in_progress/spatial_topography_CUBIC/data/task_maps/hcp_group_task_maps/S1200.L.inflated_MSMAll.32k_fs_LR.surf.gii")
+right_gii <- readgii("/Users/utooley/Documents/projects/in_progress/spatial_topography_CUBIC/data/task_maps/hcp_group_task_maps/S1200.R.inflated_MSMAll.32k_fs_LR.surf.gii")
 # c <- surf_triangles(l)
 # rgl::rgl.open()
 # rgl::rgl.triangles(c$pointset)
 # rgl::play3d(rgl::spin3d(axis = c(0,1, 1)), duration = 10)
 #read cifti
-cifti='/Users/utooley/Documents/projects/in_progress/spatial_topography_CUBIC/data/ursula/nBack_2_back_vs_0_back_performance_2back_dat_cohen_c1.dscalar.nii'
+cifti='/Users/utooley/Documents/projects/in_progress/spatial_topography_CUBIC/data/task_maps/hcp_group_task_maps/HCP_S1200_997_tfMRI_ALLTASKS_level2_cohensd_hp200_s2_MSMAll.dscalar.nii'
 left = cifti_coords_gifti(
   cifti,
   gii_file = left_gii,
