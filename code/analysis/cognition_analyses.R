@@ -138,18 +138,18 @@ main_schaeferwsbm <- filter(main_schaeferwsbm, ID != "sub-NDARINV4H7G4RXD")
 main_yeodev <- filter(main_yeodev, ID != "sub-NDARINV4H7G4RXD")
 
 #recode income if I end up using it
-main$demo_comb_income_numeric <- recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
+main$demo_comb_income_numeric <- dplyr::recode(as.numeric(as.character(main$demo_comb_income_v2)), "1 = 2500; 2 = 8500; 3 = 14000; 4 = 20500; 5 = 30000; 6 = 42500; 7 = 62500; 8 = 87500; 9 = 150000; 10 = 200000; 999 = NA ; 777 = NA")  
 
 # Plot data descriptives --------------------------------------------------
-measures=select(main_schaeferyeo7_nback,one_of("nihtbx_list_uncorrected","pea_wiscv_tss", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate","dprime_faces", "dprime_places"))
+measures=select(main_schaeferyeo7,one_of("nihtbx_list_uncorrected","pea_wiscv_trs", "tfmri_nb_all_beh_ctotal_rate","tfmri_nb_all_beh_c2b_rate","dprime_faces", "dprime_places"))
 par(mfrow=c(5,3))
 i=1
 for (meas in measures){
   name=colnames(measures)[i]
   hist(meas, main=name, col = "lightblue") #hist of measure
   i=i+1
-  scatter.smooth(main_schaeferyeo7_nback$age,meas,  col = "blue", main="versus age")
-  p <- vioplot(meas~main_schaeferyeo7_nback$gender, main="versus gender") #gender
+  scatter.smooth(main_schaeferyeo7$age,meas,  col = "blue", main="versus age")
+  p <- vioplot(meas~main_schaeferyeo7$gender, main="versus gender") #gender
 }
 #plot each of them with each of the others
 chart.Correlation(measures)
@@ -163,8 +163,9 @@ main_yeodev_nback <- filter(main_yeodev, tfmri_nback_beh_performflag==1 | is.na(
 #add checks for model fit and performance with check_model() and model_performance()
 
 measures=c("nihtbx_list_uncorrected","pea_wiscv_tss", "dprime_places", "dprime_faces")
-#nets=c("system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo")
+nets=c("system_segreg_yeo","mean_within_sys_yeo", "mean_between_sys_yeo","modul_yeo")
 nets=c("sys4to4","sys6to6", "sys4to7", "sys6to7", "sys5to7", "sys5to6")
+measures=c("pea_wiscv_trs")
 #Schaefer400-Yeo7
 for (meas in measures){
   print(meas)

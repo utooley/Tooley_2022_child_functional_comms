@@ -75,6 +75,7 @@ trace(fsbrain:::brainview.sr, edit=TRUE)
 #CHANGE THE ORDERING OF THE T4 and T9 PLOT BRAINS
 trace(fsbrain:::brainview.t9, edit=TRUE)
 #edit the order of the 4 or 9 views--figure out how to make this permanent!
+
 ##########################
 ####### PLOTTING #########
 ##########################
@@ -87,7 +88,7 @@ schaefer_atlas_region_names_lh = get.atlas.region.names(atlas, template_subjects
 schaefer_atlas_region_names_rh = get.atlas.region.names(atlas, template_subjects_dir = subjects_dir,template_subject=subject_id, hemi="rh");
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions, rglactions = rglactions);
+vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order', 'lh',  'inflated', views=c('si'), rgloptions = rgloptions);
 
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
@@ -207,6 +208,8 @@ switches[brain %in% remove ] <- 0
 switches_lh <- switches[1:40962]
 switches_rh <- switches[40963:81924]
 
+switches_yeodev <- ifelse(switches==0,0,1)
+
 #Make a palette for this
 switch_colors=colorRampPalette(c("#f2f2f2", "#FF999A", "#C381FF", "#df613a","#d5668f", "#cec2b7")) #gray for 0(same),  ,tan for other switch
 barplot(1:6,col=switch_colors(6))
@@ -303,7 +306,10 @@ clipped_silhouette_lh <- clip.data(silhouette_lh_fs6, lower_bound,0.6)
 #Visualize them on fsaverage6
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
 rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_fsaverage6.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+colFn_diverging = colorRampPalette(c("burlywood4","burlywood3","white"));
+makecmap_options=list('colFn'=colFn_diverging)
+vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated",  views="t4", rgloptions = rgloptions, 
+                    rglactions = rglactions, makecmap_options = makecmap_options,draw_colorbar = TRUE)
 
 #visualize only the maxed out confidence values of 1 in adult confidence
 silhouette_lh_fs6_max <- ifelse(silhouette_lh_fs6<1, 0,1)
@@ -628,6 +634,40 @@ vis.data.on.subject(subjects_dir, 'fsaverage6',switches_lh, switches_rh,
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities_annotation.png"))
 vis.subject.annot(subjects_dir, 'fsaverage6', 'wsbm.consensus.fsaverage6', 'both',  'inflated', views=c('t4'), rgloptions = rgloptions);
 #THESE do look right! The sum of vertices here is the same as in surfarea.stats.
+
+# Gradient of switches ----------------------------------------------------
+switches_wsbm <- ifelse(switches==0,0,1)
+sum <- switches_wsbm+switches_yeodev #switches from adults
+
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/"
+display.brewer.all()
+brewer.pal(8,"BuPu")
+switch_colors=colorRampPalette(c("white","#BFD3E6","#8C96C6")) #gray for 0(same), tan for other switch
+barplot(1:3,col = switch_colors(3))
+makecmap_options=list('colFn'=switch_colors)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"gradient_of_switches_from_adult.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6',sum[1:40962], sum[40963:81924], 
+                    "inflated", views="t4", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
+
+#What switches between Yeo-dev and WSBM?
+brain <- paste0(yeo_dev,as.character(c(wsbm_lh,wsbm_rh)))
+table(brain)
+remove=c("00","11","22","33","44","55","66","77") #remove the same assignments and look at what is most common
+sum(table(brain[!brain %in% remove]))
+#42 31 65 57 are the most common reassignments from Yeo to Yeo dev on lh and rh, so assign these their own categories
+perc <- table(brain[!brain %in% remove])/43013 #perc of total switches, total vertices that switched is 27866
+sort(perc)
+switches <- rep(6,length(brain)) #create a new vector to compare to
+switches[brain %in% remove ] <- 0
+switches_yeodev_wsbm <- ifelse(switches==6,1,0)
+
+sum_all <- switches_wsbm+switches_yeodev+switches_yeodev_wsbm #switches between all three
+switch_colors=colorRampPalette(c("white","#BFD3E6","#8C96C6","#88419D")) #gray for 0(same),  ,tan for other switch
+rglactions=list("snapshot_png"=paste0(output_image_directory,"gradient_of_switches_all_3.png"))
+makecmap_options=list('colFn'=switch_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage6',sum_all[1:40962], sum_all[40963:81924], 
+                    "inflated", views="t4", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
+
 # Surface area in WSBM vs. Yeo7 by community ----------------------------
 #YEO7
 #LH

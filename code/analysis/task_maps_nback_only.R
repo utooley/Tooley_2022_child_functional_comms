@@ -12,6 +12,7 @@ library(stringr)
 library(ggplot2)
 library(tidyr)
 library(data.table)
+library(boot)
 
 #rearrange the order of the brains in the T9 view of fsbrain
 source("~/Documents/tools/fsbrain_fix_t9.R")
@@ -25,6 +26,7 @@ subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcel
 yeo_dev_dir="/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries_mot_outliers/"
 yeo7_ref_dir="/cbica/projects/spatial_topography/tools/CBIG/stable_projects/brain_parcellation/Yeo2011_fcMRI_clustering/1000subjects_reference/"
 task_maps_dir="/cbica/projects/spatial_topography/data/imageData/task_maps/"
+output_image_directory="/cbica/projects/spatial_topography/output/images/brains/task_maps/"
 
 # Read in files -----------------------------------------------------------
 #Vector of WSBM community assignments
@@ -68,57 +70,13 @@ lh_nback <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.nBack_2_back_vs_0_back_
 rh_nback <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.nBack_2_back_vs_0_back_performance_2back_.rh.41k_fsavg_R.func.gii"), element_index = 1L)
 nback_2_vs_0_perf <- c(lh_nback,rh_nback)
 
-lh_nback_faces_vs_places <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.nBack_face_vs_place_performance_2back_.lh.41k_fsavg_L.func.gii"), element_index = 1L)
-rh_nback_faces_vs_places <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.nBack_face_vs_place_performance_2back_.rh.41k_fsavg_R.func.gii"), element_index = 1L)
-nback_faces_vs_places <- c(lh_nback_faces_vs_places,rh_nback_faces_vs_places)
-
 #Sanity check of plotting
 rgloptions=list("windowRect"=c(50,50,1000,1000));
-rglactions=list('shift_hemis_apart'=list('min_dist'=100))
+rglactions=list('shift_hemis_apart'=list('min_dist'=100), "snapshot_png"=paste0(output_image_directory,"nback.png"))
 colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
 makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'= TRUE)
-
 vis.data.on.subject(subjects_dir, 'fsaverage6',lh_nback, rh_nback, "inflated", views="t9", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
-
-lh_mid_largeloss <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_large_loss_vs_neutral_.lh.41k_fsavg_L.func.gii"))
-rh_mid_largeloss <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_large_loss_vs_neutral_.rh.41k_fsavg_R.func.gii"))
-mid_largeloss_vs_neut <- c(lh_mid_largeloss,rh_mid_largeloss)
-
-lh_mid_largewin <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_large_reward_vs_neutral_.lh.41k_fsavg_L.func.gii"))
-rh_mid_largewin <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_large_reward_vs_neutral_.rh.41k_fsavg_R.func.gii"))
-mid_largewin_vs_neut <- c(lh_mid_largewin,rh_mid_largewin)
-
-lh_mid_ant_win <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_reward_vs_neutral_.lh.41k_fsavg_L.func.gii"))
-rh_mid_ant_win <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_reward_vs_neutral_.rh.41k_fsavg_R.func.gii"))
-mid_ant_win <- c(lh_mid_ant_win,rh_mid_ant_win)
-
-lh_mid_ant_loss <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_loss_vs_neutral_.lh.41k_fsavg_L.func.gii"))
-rh_mid_ant_loss <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_antic_loss_vs_neutral_.rh.41k_fsavg_R.func.gii"))
-mid_ant_loss <- c(lh_mid_ant_loss,rh_mid_ant_loss)
-
-lh_mid_feedback_win_posneg <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_reward_pos_vs_neg_feedback_.lh.41k_fsavg_L.func.gii"))
-rh_mid_feedback_win_posneg <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_reward_pos_vs_neg_feedback_.rh.41k_fsavg_R.func.gii"))
-mid_feedback_win_pos_vs_neg <- c(lh_mid_feedback_win_posneg,rh_mid_feedback_win_posneg)
-
-lh_mid_feedback_loss_posneg <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_loss_pos_vs_neg_feedback_.lh.41k_fsavg_L.func.gii"))
-rh_mid_feedback_loss_posneg <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.MID_loss_pos_vs_neg_feedback_.rh.41k_fsavg_R.func.gii"))
-#mid_feedback_loss_pos_vs_neg <- c(lh_mid_feedback_win_posneg,rh_mid_feedback_win_posneg)
-
-lh_sst_corr_stop_vs_failed <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.SST_correct_stop_vs_incorrect_stop_performance_.lh.41k_fsavg_L.func.gii"))
-rh_sst_corr_stop_vs_failed <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.SST_correct_stop_vs_incorrect_stop_performance_.rh.41k_fsavg_R.func.gii"))
-sst_crct_stop_vs_failed <- c(lh_sst_corr_stop_vs_failed,rh_sst_corr_stop_vs_failed)
-
-lh_sst_corr_stop_vs_corr_go <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.SST_correct_stop_vs_correct_go_performance_.lh.41k_fsavg_L.func.gii"))
-rh_sst_corr_stop_vs_corr_go <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.SST_correct_stop_vs_correct_go_performance_.rh.41k_fsavg_R.func.gii"))
-sst_crct_stop_vs_corr_go <- c(lh_sst_corr_stop_vs_corr_go,rh_sst_corr_stop_vs_corr_go)
-
-#Sanity check of plotting
-rgloptions=list("windowRect"=c(50,50,1000,1000));
-colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
-makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
-vis.data.on.subject(subjects_dir, 'fsaverage6', lh, rh_mid_feedback_loss_posneg, "inflated", views="t4", makecmap_options = makecmap_options,
-                    rgloptions = rgloptions, draw_colorbar = TRUE)
 
 # Make a default system conjunction map -----------------------------------
 # Just take bottom 20% of nback
@@ -126,20 +84,22 @@ nback_2_vs_0_bottom <- rep(0, length(nback_2_vs_0_perf))
 nback_2_vs_0_bottom[nback_2_vs_0_perf<quantile(nback_2_vs_0_perf, probs = 0.20)] <- 1
 
 #Look at this overlap
-overlap_colors=colorRampPalette(c("lightgray", "darkred"))
-makecmap_options=list('colFn'=overlap_colors, 'n'=4)
+overlap_colors=colorRampPalette(c("white", "#92C5DE"))
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_bottom_20.png"))
+makecmap_options=list('colFn'=overlap_colors, 'n'=12)
 vis.data.on.subject(subjects_dir, 'fsaverage6',nback_2_vs_0_bottom[0:40962], nback_2_vs_0_bottom[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
-                    rgloptions = rgloptions, draw_colorbar = TRUE)
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
 
 # Make a frontoparietal system conjunction map -----------------------------------
 #Just take top of nback 2 vs 0
 nback_2_vs_0_top <- rep(0, length(nback_2_vs_0_perf))
 nback_2_vs_0_top[nback_2_vs_0_perf>quantile(nback_2_vs_0_perf, probs = 0.80)] <- 1
 #Look at this
-overlap_colors=colorRampPalette(c("lightgray", "darkred"))
+overlap_colors=colorRampPalette(c("white", "#D6604D"))
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_top_20.png"))
 makecmap_options=list('colFn'=overlap_colors)
 vis.data.on.subject(subjects_dir, 'fsaverage6',nback_2_vs_0_top[0:40962], nback_2_vs_0_top[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
-                    rgloptions = rgloptions, draw_colorbar = TRUE)
+                    rgloptions = rgloptions,rglactions = rglactions, draw_colorbar = TRUE)
 
 ###################################
 ########## COMPARE TO PARTITIONS ######
@@ -183,6 +143,17 @@ yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccar
 yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
 cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
 
+### Bootstrap Dice coefficient ####
+wsbm_to_nback <- data.frame(wsbm_7,nback_2_vs_0_bottom)
+dice_wsbm_Boot_CI<-function(x,indices){
+  tempdat<-wsbm_to_nback[indices,]
+  dice <- mclustcomp(tempdat$wsbm_7,tempdat$nback_2_vs_0_bottom, types = c("sdc"))
+  return(dice$scores)
+}
+set.seed(598370)
+results <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=10)
+boot.ci(results)
+
 ##### Sum of betas within the system ####
 yeo7_7_betas <- ifelse(yeo7_7==1, nback_2_vs_0_perf, 0)
 yeo_dev_7_betas <- ifelse(yeo_dev_7==1, nback_2_vs_0_perf, 0)
@@ -190,10 +161,17 @@ wsbm_7_betas <- ifelse(wsbm_7==1, nback_2_vs_0_perf, 0)
 
 #Sanity check of plotting
 rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_betas_wsbm.png"))
 colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
 makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
 vis.data.on.subject(subjects_dir, 'fsaverage6', wsbm_7_betas[0:40962], wsbm_7_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
-                    rgloptions = rgloptions, draw_colorbar = TRUE)
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_betas_yeo_dev.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6', yeo_dev_7_betas[0:40962], yeo_dev_7_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_betas_yeo7.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6', yeo7_7_betas[0:40962], yeo7_7_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
 
 ##########################
 ####### PLOTTING #########
@@ -211,7 +189,7 @@ source("~/Documents/tools/raincloud.R")
 lb <- function(x) mean(x) - sd(x)
 ub <- function(x) mean(x) + sd(x)
 sumld<- ddply(data, ~yeo7, summarise, mean = mean(freq), median = median(freq), lower = lb(freq), upper = ub(freq))
-
+colors=colorRampPalette(c("#4669dc","pink","purple"))
 head(sumld)
 g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = partition)) +
   geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
@@ -220,13 +198,14 @@ g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = partition)) +
   expand_limits(x = 5.25) +
   guides(fill = FALSE) +
   guides(color = FALSE) +
-  scale_color_manual(values=c("lightgreen", "lightblue", "purple")) +
-  scale_fill_manual(values= c("lightgreen", "lightblue", "purple")) +
+  scale_color_manual(values=c("#4669dc","pink","purple")) +
+  scale_fill_manual(values=c("#4669dc","pink","purple")) +
   # coord_flip() +
   theme_bw() +
   raincloud_theme
 
 g
+longdata %>% group_by(partition) %>% summarise_all(median)
 
 #Stats
 kruskal.test(betas~partition, data = longdata)
@@ -237,9 +216,9 @@ pairwise.wilcox.test(longdata$betas, longdata$partition,
 library(igraph);library(aricode);library(mclustcomp)
 
 #Just binary overlap, Dice coefficient
-wsbm_6 =ifelse(wsbm==6,1,0)
-yeo_dev_6=ifelse(yeo_dev==6,1,0)
-yeo7_6=ifelse(yeo7==6,1,0)#about the same as yeo_dev
+wsbm_6 =ifelse(wsbm==6,1,ifelse(wsbm==3,1,0))
+yeo_dev_6=ifelse(yeo_dev==6,1,ifelse(yeo_dev==3,1,0))
+yeo7_6=ifelse(yeo7==6,1,ifelse(yeo7==3,1,0))#about the same as yeo_dev
 
 wsbm_to_nback <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
 yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
@@ -255,7 +234,7 @@ wsbm_6_betas <- ifelse(wsbm_6==1, nback_2_vs_0_perf, 0)
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
 makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
-vis.data.on.subject(subjects_dir, 'fsaverage6', wsbm_6_betas[0:40962],wsbm_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+vis.data.on.subject(subjects_dir, 'fsaverage6', yeo7_6_betas[0:40962],yeo7_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, draw_colorbar = TRUE)
 
 ##########################
@@ -288,7 +267,7 @@ g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = partition)) +
   raincloud_theme
 
 g
-
+longdata %>% group_by(partition) %>% summarise_all(median)
 #Stats
 kruskal.test(betas~partition, data = longdata)
 pairwise.wilcox.test(longdata$betas, longdata$partition,
@@ -432,9 +411,9 @@ pairwise.wilcox.test(longdata$betas, longdata$partition,
 library(igraph);library(aricode);library(mclustcomp)
 
 #Just binary overlap, Dice coefficient
-wsbm_6 =ifelse(wsbm==6,1,0)
-yeo_dev_6=ifelse(yeo_dev==6,1,0)
-yeo7_6=ifelse(yeo7==6,1,0)#about the same as yeo_dev
+wsbm_6 =ifelse(wsbm==6,1,ifelse(wsbm==3,1,0))
+yeo_dev_6=ifelse(yeo_dev==6,1,ifelse(yeo_dev==3,1,0))
+yeo7_6=ifelse(yeo7==6,1,ifelse(yeo7==3,1,0))#about the same as yeo_dev
 
 wsbm_to_nback <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
 yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
