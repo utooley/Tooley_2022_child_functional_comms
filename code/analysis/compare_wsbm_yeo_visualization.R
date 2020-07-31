@@ -922,3 +922,28 @@ sum_rh <- silhouette_rh_dev+rh_freq_perc
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"sum_yeodev_confidence_inconsistence_wsbm.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6',sum_lh, sum_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+
+#########################
+
+# SEED ANALYSES -----------------------------------------------------------
+
+#######################
+seed_dir="/cbica/projects/spatial_topography/data/imageData/seed_analyses/"
+#Vector of seed connectivity
+cortex<- readMat(paste0(seed_dir,"test_seed_vect_fsaverage6.mat"), drop = )
+test_seed <-  cortex$corr.mat.fsaverage6.test.seed
+summary(seed_lh)
+
+#threshold
+test_seed <- ifelse(test_seed > quantile(test_seed, 0.80),test_seed,0) 
+seed_lh <- test_seed[1:40962]
+seed_rh <- test_seed[40963:81924]
+
+
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list('shift_hemis_apart'=list('min_dist'=20))
+fc_colors=colorRampPalette(c("gray",brewer.pal(9,'YlOrRd')))
+makecmap_options=list('colFn'=fc_colors,100)
+vis.data.on.subject(subjects_dir, 'fsaverage6',seed_lh, seed_rh, 
+                    "inflated", views="t9", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
