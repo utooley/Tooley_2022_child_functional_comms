@@ -40,10 +40,3 @@ lh_s(l1) = s(1:length(l1));
 rh_s = ones(rh_num_verts, 1);
 rh_s(l2) = s(length(l1)+1:end);
 
-
-%compute seed-based correlation?
-roi_file='~/Documents/tools/parcellations/Yeo_ThalamusParcellation/test.nii'
-output_file='~/test.nii'
-
-
-CBIG_ComputeCorrelationProfileVol2Surf(roi_file, output_file, 1, surf_input_files_txt, vol_input_files_txt, regress_bool)
