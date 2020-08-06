@@ -414,14 +414,15 @@ source("~/Documents/tools/raincloud.R")
 
 silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
 silhouette_rh_dev <-  yeo_dev_partition$rh.s
-silhouette_lh_dev <- silhouette_lh_yeo7
-silhouette_rh_dev <- silhouette_rh_yeo7
+# silhouette_lh_dev <- silhouette_lh_yeo7
+# silhouette_rh_dev <- silhouette_rh_yeo7
 silhouette_dev <- c(silhouette_lh_dev,silhouette_rh_dev) 
 yeo7 <- c(yeo7_lh, yeo7_rh)
 data <- data.frame(silhouette_dev, as.character(yeo7))
 data <- data[data$as.character.yeo7 != "0",]#remove the medial wall
 colnames(data) <- c("silhouette", "yeo7")
 data <- data %>% filter(silhouette!=1) #remove the 1's for silhouette around the medial wall
+#data$silhouette[data$silhouette<0] <- 0#set negative values to 0
 
 ## Raincloud plot
 lb <- function(x) mean(x) - sd(x)
@@ -444,6 +445,11 @@ g <- ggplot(data = data, aes(y = silhouette, x = yeo7, fill = yeo7)) +
   raincloud_theme
 
 g
+
+#Stats
+kruskal.test(silhouette~yeo7, data = data)
+pairwise.wilcox.test(data$silhouette, data$yeo7,
+                     p.adjust.method = "bonferroni")
 
 # Plot confidence in community assignment by Yeodev system (Supplement)-------------------------------------
 library(Hmisc)
@@ -482,6 +488,12 @@ g <- ggplot(data = data, aes(y = silhouette, x = yeodev, fill = yeodev)) +
   raincloud_theme
 
 g
+
+#Stats
+kruskal.test(silhouette~yeodev, data = data)
+pairwise.wilcox.test(data$silhouette, data$yeodev,
+                     p.adjust.method = "bonferroni")
+
 ####################################
 ############# WSBM #################
 ####################################
@@ -778,6 +790,12 @@ g <- ggplot(data = data, aes(y = freq, x = yeo7, fill = yeo7)) +
   raincloud_theme
 
 g
+
+#Stats
+kruskal.test(freq~yeo7, data = data)
+pairwise.wilcox.test(data$freq, data$yeo7,
+                     p.adjust.method = "bonferroni")
+
 # Plot variance in community assignment by WSBM system (supplement)------------------------
 #Read in the frequency of ties in the group WSBM partition
 z <- readMat(paste0(wsbm_datadir,"consensus_iter_mode.mat"), drop = )

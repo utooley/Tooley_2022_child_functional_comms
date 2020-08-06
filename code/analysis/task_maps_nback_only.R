@@ -151,7 +151,7 @@ dice_wsbm_Boot_CI<-function(x,indices){
   return(dice$scores)
 }
 set.seed(598370)
-results <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=10)
+results <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=2)
 boot.ci(results)
 
 ##### Sum of betas within the system ####
@@ -216,9 +216,9 @@ pairwise.wilcox.test(longdata$betas, longdata$partition,
 library(igraph);library(aricode);library(mclustcomp)
 
 #Just binary overlap, Dice coefficient
-wsbm_6 =ifelse(wsbm==6,1,ifelse(wsbm==3,1,0))
-yeo_dev_6=ifelse(yeo_dev==6,1,ifelse(yeo_dev==3,1,0))
-yeo7_6=ifelse(yeo7==6,1,ifelse(yeo7==3,1,0))#about the same as yeo_dev
+wsbm_6 =ifelse(wsbm==6,1,0)
+yeo_dev_6=ifelse(yeo_dev==6,1,0)
+yeo7_6=ifelse(yeo7==6,1,0)#about the same as yeo_dev
 
 wsbm_to_nback <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
 yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
@@ -232,10 +232,17 @@ wsbm_6_betas <- ifelse(wsbm_6==1, nback_2_vs_0_perf, 0)
 
 #Sanity check of plotting
 rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_pos_betas_wsbm.png"))
 colFn_diverging = grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11, name="RdBu")));
 makecmap_options=list('colFn'=colFn_diverging, 'n'=100, 'symm'=TRUE)
-vis.data.on.subject(subjects_dir, 'fsaverage6', yeo7_6_betas[0:40962],yeo7_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
-                    rgloptions = rgloptions, draw_colorbar = TRUE)
+vis.data.on.subject(subjects_dir, 'fsaverage6', wsbm_6_betas[0:40962], wsbm_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_pos_betas_yeo_dev.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6', yeo_dev_6_betas[0:40962], yeo_dev_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_pos_betas_yeo7.png"))
+vis.data.on.subject(subjects_dir, 'fsaverage6', yeo7_6_betas[0:40962], yeo7_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
 
 ##########################
 ####### PLOTTING #########
@@ -260,13 +267,14 @@ g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = partition)) +
   expand_limits(x = 5.25) +
   guides(fill = FALSE) +
   guides(color = FALSE) +
-  scale_color_manual(values=c("lightgreen", "lightblue", "purple")) +
-  scale_fill_manual(values= c("lightgreen", "lightblue", "purple")) +
+  scale_color_manual(values=c("#4669dc","pink","purple")) +
+  scale_fill_manual(values=c("#4669dc","pink","purple")) +
   # coord_flip() +
   theme_bw() +
   raincloud_theme
 
 g
+
 longdata %>% group_by(partition) %>% summarise_all(median)
 #Stats
 kruskal.test(betas~partition, data = longdata)
