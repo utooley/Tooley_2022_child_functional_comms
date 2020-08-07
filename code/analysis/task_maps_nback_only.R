@@ -143,7 +143,7 @@ yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccar
 yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
 cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
 
-### Bootstrap Dice coefficient ####
+### Bootstrap Dice coefficient--WSBM ####
 wsbm_to_nback <- data.frame(wsbm_7,nback_2_vs_0_bottom)
 dice_wsbm_Boot_CI<-function(x,indices){
   tempdat<-wsbm_to_nback[indices,]
@@ -151,8 +151,38 @@ dice_wsbm_Boot_CI<-function(x,indices){
   return(dice$scores)
 }
 set.seed(598370)
-results <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=2)
-boot.ci(results)
+results_wsbm <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
+CI_wsbm_7 <- boot.ci(results, type="basic")
+CI_wsbm_7 <- boot.ci(results, type="perc")
+boot.ci(results, type = "bca")
+
+### Bootstrap Dice coefficient--Yeo-dev ###
+yeodev_to_nback <- data.frame(yeo_dev_7,nback_2_vs_0_bottom)
+dice_yeodev_Boot_CI<-function(x,indices){
+  tempdat<-yeodev_to_nback[indices,]
+  dice <- mclustcomp(tempdat$yeo_dev_7,tempdat$nback_2_vs_0_bottom, types = c("sdc"))
+  return(dice$scores)
+}
+set.seed(598370)
+results_yeodev <- boot(data=yeodev_to_nback, statistic=dice_yeodev_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
+CI_yeodev_7 <- boot.ci(results_yeodev, type="basic")
+CI_yeodev_7 <- boot.ci(results_yeodev, type="perc")
+boot.ci(results_yeodev, type = "bca")
+
+### Bootstrap Dice coefficient--Yeo7 ###
+yeo7_to_nback <- data.frame(yeo7_7,nback_2_vs_0_bottom)
+dice_yeo7_Boot_CI<-function(x,indices){
+  tempdat<-yeo7_to_nback[indices,]
+  dice <- mclustcomp(tempdat$yeo7_7,tempdat$nback_2_vs_0_bottom, types = c("sdc"))
+  return(dice$scores)
+}
+set.seed(598370)
+results_yeo7 <- boot(data=yeo7_to_nback, statistic=dice_yeo7_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
+CI_yeo7_7 <- boot.ci(results_yeo7, type="basic")
+CI_yeo7_7 <- boot.ci(results_yeo7, type="perc")
+boot.ci(results_yeodev, type = "bca")
+
+save(results, results_yeodev, results_wsbm, file= paste0(output_dir, "bootstrapped_CIs_default.RData"))
 
 ##### Sum of betas within the system ####
 yeo7_7_betas <- ifelse(yeo7_7==1, nback_2_vs_0_perf, 0)
