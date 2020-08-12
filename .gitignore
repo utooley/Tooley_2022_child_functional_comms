@@ -23,6 +23,7 @@ matlab/
 /data/clustering/
 /data/subjects
 /data/task_maps/
+/data/*.RData
 /docs
 /output
 **/.DS_Store

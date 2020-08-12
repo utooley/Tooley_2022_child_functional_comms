@@ -652,14 +652,14 @@ switches_wsbm <- ifelse(switches==0,0,1)
 sum <- switches_wsbm+switches_yeodev #switches from adults
 
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/"
-display.brewer.all()
-brewer.pal(8,"BuPu")
+# display.brewer.all()
+# brewer.pal(8,"BuPu")
 switch_colors=colorRampPalette(c("white","#BFD3E6","#8C96C6")) #gray for 0(same), tan for other switch
 barplot(1:3,col = switch_colors(3))
 makecmap_options=list('colFn'=switch_colors)
 rglactions=list("snapshot_png"=paste0(output_image_directory,"gradient_of_switches_from_adult.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6',sum[1:40962], sum[40963:81924], 
-                    "inflated", views="t4", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
+                    "inflated", views="t4", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
 
 #What switches between Yeo-dev and WSBM?
 brain <- paste0(yeo_dev,as.character(c(wsbm_lh,wsbm_rh)))
@@ -678,7 +678,7 @@ switch_colors=colorRampPalette(c("white","#BFD3E6","#8C96C6","#88419D")) #gray f
 rglactions=list("snapshot_png"=paste0(output_image_directory,"gradient_of_switches_all_3.png"))
 makecmap_options=list('colFn'=switch_colors)
 vis.data.on.subject(subjects_dir, 'fsaverage6',sum_all[1:40962], sum_all[40963:81924], 
-                    "inflated", views="t4", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions)
+                    "inflated", views="t4", makecmap_options=makecmap_options, rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
 
 # Surface area in WSBM vs. Yeo7 by community ----------------------------
 #YEO7

@@ -143,7 +143,25 @@ yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccar
 yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
 cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
 
+#iterate over robustness of threshold 10-20
+for (i in 10:20){
+  nback_2_vs_0_bottom <- rep(0, length(nback_2_vs_0_perf))
+  nback_2_vs_0_bottom[nback_2_vs_0_perf<quantile(nback_2_vs_0_perf, probs = (i/100))] <- 1
+  wsbm_to_nback <- mclustcomp(wsbm_7,nback_2_vs_0_bottom, types = c("sdc")) #for binary vectors
+  yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("sdc")) #for binary vectors
+  yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("sdc")) #for binary vectors
+  compare[[i]] <- cbind(yeo_adult_to_nback$scores,yeo_dev_to_nback$scores,wsbm_to_nback$scores)
+}
+dmn_dice_robustness <- data.frame(matrix(unlist(compare), nrow=11, byrow=T)) 
+colnames(dmn_dice_robustness) <- c("yeo7", "yeodev", "wsbm")
+melt(dmn_dice_robustness) %>% cbind(10:20,.)
+#plot
+
+#########################################
 ### Bootstrap Dice coefficient--WSBM ####
+#########################################
+load("~/Documents/projects/in_progress/spatial_topography_CUBIC/data/bootstrapped_CIs_default.RData")
+#if it's already done, just load the above
 wsbm_to_nback <- data.frame(wsbm_7,nback_2_vs_0_bottom)
 dice_wsbm_Boot_CI<-function(x,indices){
   tempdat<-wsbm_to_nback[indices,]
@@ -152,8 +170,9 @@ dice_wsbm_Boot_CI<-function(x,indices){
 }
 set.seed(598370)
 results_wsbm <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
-CI_wsbm_7 <- boot.ci(results, type="basic")
-CI_wsbm_7 <- boot.ci(results, type="perc")
+CI_wsbm_7 <- boot.ci(results_wsbm, type="basic")
+CI_wsbm_7 <- boot.ci(results_wsbm, type="perc")
+CI_wsbm_7
 boot.ci(results, type = "bca")
 
 ### Bootstrap Dice coefficient--Yeo-dev ###
@@ -166,7 +185,7 @@ dice_yeodev_Boot_CI<-function(x,indices){
 set.seed(598370)
 results_yeodev <- boot(data=yeodev_to_nback, statistic=dice_yeodev_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
 CI_yeodev_7 <- boot.ci(results_yeodev, type="basic")
-CI_yeodev_7 <- boot.ci(results_yeodev, type="perc")
+CI_yeodev_7 <- boot.ci(results_yeodev, type="perc") #This is what I'm using
 boot.ci(results_yeodev, type = "bca")
 
 ### Bootstrap Dice coefficient--Yeo7 ###
@@ -180,9 +199,10 @@ set.seed(598370)
 results_yeo7 <- boot(data=yeo7_to_nback, statistic=dice_yeo7_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
 CI_yeo7_7 <- boot.ci(results_yeo7, type="basic")
 CI_yeo7_7 <- boot.ci(results_yeo7, type="perc")
+CI_yeo7_7
 boot.ci(results_yeodev, type = "bca")
 
-save(results, results_yeodev, results_wsbm, file= paste0(output_dir, "bootstrapped_CIs_default.RData"))
+save(results_yeo7, results_yeodev, results_wsbm, file= paste0("~/Documents/projects/in_progress/spatial_topography_CUBIC/data/bootstrapped_CIs_default.RData"))
 
 ##### Sum of betas within the system ####
 yeo7_7_betas <- ifelse(yeo7_7==1, nback_2_vs_0_perf, 0)
@@ -255,6 +275,18 @@ yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard",
 yeo_adult_to_nback <-  mclustcomp(yeo7_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
 cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
 
+for (i in 20:10){
+  nback_2_vs_0_top <- rep(0, length(nback_2_vs_0_perf))
+  nback_2_vs_0_top[nback_2_vs_0_perf>quantile(nback_2_vs_0_perf, probs = ((100-i)/100))] <- 1
+  wsbm_to_nback <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("sdc")) #for binary vectors
+  yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("sdc")) #for binary vectors
+  yeo_adult_to_nback <-  mclustcomp(yeo7_6,nback_2_vs_0_top,  types = c("sdc")) #for binary vectors
+  compare[[i]] <- cbind(yeo_adult_to_nback$scores,yeo_dev_to_nback$scores,wsbm_to_nback$scores)
+}
+fp_dice_robustness <- data.frame(matrix(unlist(compare), nrow=11, byrow=T)) 
+colnames(fp_dice_robustness) <- c("yeo7", "yeodev", "wsbm")
+melt(fp_dice_robustness) %>% cbind(80:90,.)
+
 ##### Sum of betas within the system ####
 yeo7_6_betas <- ifelse(yeo7_6==1, nback_2_vs_0_perf, 0)
 yeo_dev_6_betas <- ifelse(yeo_dev_6==1, nback_2_vs_0_perf, 0)
@@ -273,6 +305,52 @@ vis.data.on.subject(subjects_dir, 'fsaverage6', yeo_dev_6_betas[0:40962], yeo_de
 rglactions=list("snapshot_png"=paste0(output_image_directory,"nback_pos_betas_yeo7.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6', yeo7_6_betas[0:40962], yeo7_6_betas[40963:81924], "inflated", views="t4", makecmap_options = makecmap_options,
                     rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = TRUE)
+
+#########################################
+### Bootstrap Dice coefficient--WSBM ####
+#########################################
+wsbm_to_nback <- data.frame(wsbm_6,nback_2_vs_0_top)
+dice_wsbm_Boot_CI<-function(x,indices){
+  tempdat<-wsbm_to_nback[indices,]
+  dice <- mclustcomp(tempdat$wsbm_6,tempdat$nback_2_vs_0_top, types = c("sdc"))
+  return(dice$scores)
+}
+set.seed(598370)
+results_wsbm <- boot(data=wsbm_to_nback, statistic=dice_wsbm_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
+CI_wsbm_6 <- boot.ci(results_wsbm, type="basic")
+CI_wsbm_6
+CI_wsbm_6 <- boot.ci(results_wsbm, type="perc")
+boot.ci(results, type = "bca")
+
+### Bootstrap Dice coefficient--Yeo-dev ###
+yeodev_to_nback <- data.frame(yeo_dev_6,nback_2_vs_0_top)
+dice_yeodev_Boot_CI<-function(x,indices){
+  tempdat<-yeodev_to_nback[indices,]
+  dice <- mclustcomp(tempdat$yeo_dev_6,tempdat$nback_2_vs_0_top, types = c("sdc"))
+  return(dice$scores)
+}
+set.seed(598370)
+results_yeodev <- boot(data=yeodev_to_nback, statistic=dice_yeodev_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
+CI_yeodev_6 <- boot.ci(results_yeodev, type="basic")
+CI_yeodev_6
+CI_yeodev_6 <- boot.ci(results_yeodev, type="perc") #This is what I'm using
+boot.ci(results_yeodev, type = "bca")
+
+### Bootstrap Dice coefficient--Yeo7 ###
+yeo7_to_nback <- data.frame(yeo7_6,nback_2_vs_0_top)
+dice_yeo7_Boot_CI<-function(x,indices){
+  tempdat<-yeo7_to_nback[indices,]
+  dice <- mclustcomp(tempdat$yeo7_6,tempdat$nback_2_vs_0_top, types = c("sdc"))
+  return(dice$scores)
+}
+set.seed(598370)
+results_yeo7 <- boot(data=yeo7_to_nback, statistic=dice_yeo7_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
+CI_yeo7_6 <- boot.ci(results_yeo7, type="basic")
+CI_yeo7_6
+CI_yeo7_6 <- boot.ci(results_yeo7, type="perc")
+boot.ci(results_yeodev, type = "bca")
+
+save(results_yeo7, results_yeodev, results_wsbm, file= paste0("~/Documents/projects/in_progress/spatial_topography_CUBIC/data/bootstrapped_CIs_frontoparietal.RData"))
 
 ##########################
 ####### PLOTTING #########
