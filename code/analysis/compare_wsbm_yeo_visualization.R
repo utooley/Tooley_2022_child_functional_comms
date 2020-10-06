@@ -88,7 +88,8 @@ schaefer_atlas_region_names_lh = get.atlas.region.names(atlas, template_subjects
 schaefer_atlas_region_names_rh = get.atlas.region.names(atlas, template_subjects_dir = subjects_dir,template_subject=subject_id, hemi="rh");
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order', 'lh',  'inflated', views=c('si'), rgloptions = rgloptions);
+vis.subject.annot(subjects_dir, 'fsaverage','Yeo2011_7Networks_N1000','both', "inflated", views="t4",
+                  rgloptions = rgloptions,rglactions = rglactions)
 
 rgloptions=list("windowRect"=c(50,50,200,200));
 rglactions=list("movie"=paste0(output_image_directory,"communities.gif"))
@@ -451,7 +452,7 @@ kruskal.test(silhouette~yeo7, data = data)
 pairwise.wilcox.test(data$silhouette, data$yeo7,
                      p.adjust.method = "bonferroni")
 
-# Plot confidence in community assignment by Yeodev system (Supplement)-------------------------------------
+# Plot confidence in community assignment by Yeodev system-------------------------------------
 library(Hmisc)
 library(plyr)
 library(RColorBrewer)
@@ -485,6 +486,44 @@ g <- ggplot(data = data, aes(y = silhouette, x = yeodev, fill = yeodev)) +
   scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
   # coord_flip() +
   theme_bw() +
+  raincloud_theme
+
+g
+
+#Stats
+kruskal.test(silhouette~yeodev, data = data)
+pairwise.wilcox.test(data$silhouette, data$yeodev,
+                     p.adjust.method = "bonferroni")
+
+# Plot adult confidence in community assignment by Yeo7 system ------------------------------------
+silhouette_yeo <- c(silhouette_lh_fs6,silhouette_rh_fs6)
+yeo7 <- c(yeo7_lh, yeo7_rh)
+data <- data.frame(silhouette_yeo, as.character(yeo7))
+data <- data[data$as.character.yeo7. != "0",]#remove the medial wall
+colnames(data) <- c("silhouette", "yeo7")
+data <- data %>% filter(silhouette!=1) #remove the 1's for silhouette around the medial wall
+
+#get y-axis limits from above
+ylim <- ggplot_build(g)$layout$panel_scales_y[[1]]$range$range
+## Raincloud plot
+lb <- function(x) mean(x) - sd(x)
+ub <- function(x) mean(x) + sd(x)
+
+sumld<- ddply(data, ~yeo7, summarise, mean = mean(silhouette), median = median(silhouette), lower = lb(silhouette), upper = ub(silhouette))
+
+head(sumld)
+g <- ggplot(data = data, aes(y = silhouette, x = yeo7, fill = yeo7)) +
+  geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+  geom_point(aes(y = silhouette, color = yeo7), position = position_jitter(width = .15), size = .08, alpha = 0.15) +
+  geom_boxplot(width = .1, guides = FALSE, outlier.shape = NA, alpha = 0.5) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  coord_cartesian(ylim=c(-0.2932246,0.8143016))+
   raincloud_theme
 
 g
@@ -550,19 +589,32 @@ compare(yeo_nodes_schaefer400[,1], consensus_iterative_labels, method = "nmi") #
 # Partition overlap statistics Adjusted-Rand and NMI ------------------------------
 library(igraph)
 library(aricode)
+#copy WSBM annotation into local CBIG subjects dir
+wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.consensus.fsaverage6')
+wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
+wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.consensus.fsaverage6')
+wsbm_lh<- as.numeric(as.character(wsbm_lh$label_names))
+yeo7 <- c(yeo7_lh,yeo7_rh)
 
-## ZRAND or NMI
+## ZRAND or NMI ON PARCELS
 compare(consensus_iterative_labels, yeo_nodes_schaefer400$V1, method = "adjusted.rand") #these give the same values as zrand in matlab, but there's no zrand.
 compare(consensus_iterative_labels, yeo_nodes_schaefer400$V1, method = "nmi")
 #use aricode 
 clustComp(consensus_iterative_labels[,1], yeo_nodes_schaefer400$V1)
 NMI_value <- clustComp(consensus_iterative_labels[,1], yeo_nodes_schaefer400$V1)$NMI
 
+## ZRAND or NMI ON VERTICES
+compare(c(wsbm_lh,wsbm_rh), yeo7, method = "adjusted.rand") #these give the same values as zrand in matlab, but there's no zrand.
+compare(c(wsbm_lh,wsbm_rh), yeo7, method = "nmi")
+#use aricode 
+clustComp(c(wsbm_lh,wsbm_rh), yeo7)
+NMI_value <- clustComp(c(wsbm_lh,wsbm_rh), yeo7)$NMI
+
 #permutation testing
 distr <- vector()
 for (i in 1:1000){
-  shuffled <- sample(consensus_iterative_labels[,1], replace = FALSE)
-  distr[i] <- clustComp(shuffled, yeo_nodes_schaefer400$V1)$NMI
+  shuffled <- sample(c(wsbm_lh,wsbm_rh), replace = FALSE)
+  distr[i] <- clustComp(shuffled, yeo7)$NMI
 }
 hist(distr)
 abline(v =NMI_value)
@@ -604,7 +656,6 @@ vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcel
 
 # Look at switches in community assignment from Yeo7 to WSBM in VE --------
 #copy WSBM annotation into local CBIG subjects dir
-get.atlas.region.names("wsbm.consensus.fsaverage6", template_subjects_dir = subjects_dir,template_subject='fsaverage6', hemi="rh");
 wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.consensus.fsaverage6')
 wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
 wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.consensus.fsaverage6')
@@ -764,6 +815,11 @@ wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.freq.fsaverage6'
 wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
 wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.freq.fsaverage6')
 wsbm_lh<- as.numeric(as.character(wsbm_lh$label_names))
+#colormap = colorRampPalette(c("white","white","pink","blue"), bias=0.8)
+#makecmap_options=list('colFn'=colormap)
+#vis.data.on.subject(subjects_dir, 'fsaverage6',wsbm_lh, wsbm_rh, makecmap_options = makecmap_options,
+#                    "inflated", views="t4", rgloptions = rgloptions, draw_colorbar = T)
+
 yeo7 <- c(yeo7_lh,yeo7_rh)
 freq <- c(wsbm_lh, wsbm_rh)
 data <- data.frame(as.character(yeo7),freq)
@@ -788,7 +844,6 @@ g <- ggplot(data = data, aes(y = freq, x = yeo7, fill = yeo7)) +
   # coord_flip() +
   theme_bw() +
   raincloud_theme
-
 g
 
 #Stats
@@ -796,7 +851,21 @@ kruskal.test(freq~yeo7, data = data)
 pairwise.wilcox.test(data$freq, data$yeo7,
                      p.adjust.method = "bonferroni")
 
-# Plot variance in community assignment by WSBM system (supplement)------------------------
+sumld<- ddply(data, ~yeo7, summarise, mean = mean(freq), median = median(freq), count = sum(freq!=0), total = length(freq), perc_varying_assign=sum(freq!=0)/length(freq))
+#percentage instead of frequency
+g <- ggplot(data = sumld, aes(y = perc_varying_assign, x = yeo7, fill = yeo7)) +
+  geom_bar(stat="identity", size = .5, alpha = 0.80) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+g
+
+# Plot variance in community assignment by WSBM system ------------------------
 #Read in the frequency of ties in the group WSBM partition
 z <- readMat(paste0(wsbm_datadir,"consensus_iter_mode.mat"), drop = )
 freq<- t(z$freq)
@@ -805,10 +874,11 @@ partitions <- readMat(paste0(wsbm_datadir,"n670_training_sample_consensus_partit
 consensus_iterative_labels <- partitions$consensus.iter.mode.yeorelabeled
 data <- data.frame(as.character(consensus_iterative_labels),freq_continuous)
 colnames(data) <- c('wsbm', 'freq')
+#data <- data[data$freq != "0",]#remove the 0's in inconsistent assignment
 ## Raincloud plot
 lb <- function(x) mean(x) - sd(x)
 ub <- function(x) mean(x) + sd(x)
-sumld<- ddply(data, ~wsbm, summarise, mean = mean(freq), median = median(freq), lower = lb(freq), upper = ub(freq))
+sumld<- ddply(data, ~wsbm, summarise, mean = mean(freq), median = median(freq), count = sum(freq!=0), total = length(freq), perc_varying_assign=sum(freq!=0)/length(freq))
 
 head(sumld)
 g <- ggplot(data = data, aes(y = freq, x = wsbm, fill = wsbm)) +
@@ -826,7 +896,21 @@ g <- ggplot(data = data, aes(y = freq, x = wsbm, fill = wsbm)) +
 
 g
 
+#percentage instead of frequency
+g <- ggplot(data = sumld, aes(y = perc_varying_assign, x = wsbm, fill = wsbm)) +
+  geom_bar(stat="identity", position = position_jitter(width = .08), size = .5, alpha = 0.80) +
+  expand_limits(x = 5.25) +
+  guides(fill = FALSE) +
+  guides(color = FALSE) +
+  scale_color_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
+  # coord_flip() +
+  theme_bw() +
+  raincloud_theme
+g
+
 # Overlap of variability in WSBM and Yeo Dev ------------------------------
+subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
 
 #First relabel Schaefer400 annotation with WSBM frequency of inconsistent assignment in matlab
@@ -840,13 +924,45 @@ rh_freq <- as.numeric(as.character(rh_freq$label_names))
 #Confidence for Yeo Dev, cut at 0 and mapping the 1's to the max value of confidence
 silhouette_lh <-  ifelse(yeo_dev_partition$lh.s==1, max(yeo_dev_partition$lh.s[yeo_dev_partition$lh.s!=1]),yeo_dev_partition$lh.s) #this is in fsaverage6 space, so 40k vertices
 silhouette_rh <-  ifelse(yeo_dev_partition$rh.s==1, max(yeo_dev_partition$rh.s[yeo_dev_partition$rh.s!=1]),yeo_dev_partition$rh.s) #this is in fsaverage6 space, so 40k vertices
+silhouette_yeo7 <- c(silhouette_lh, silhouette_rh)
+# x <- scale(silhouette_yeo7)
+# summary(x)
 
 #want to make one go up and one go down in different colors, and where they overlap is both
-assign_lh <- lh_freq/670#this ends up on 0-4, but I want 0-2 for comparison with the silhouette measure
-assign_rh <- rh_freq/670
-#scale silhouette so that the max value (high confidence) of each hemisphere is 0
-silhouette_lh_scaled <- abs(silhouette_lh-max(c(silhouette_lh,silhouette_rh)))
-silhouette_rh_scaled <- abs(silhouette_rh-max(c(silhouette_lh,silhouette_rh)))
+assign_wsbm <- c(lh_freq, rh_freq)#this ends up on 0-0.5, but I want 0-1 for comparison with the silhouette measure
+assign_wsbm_scaled <- (assign_wsbm-max(assign_wsbm))+max(assign_wsbm) #1 is highest variability in assignment, 0 is lowest
+assign_wsbm_scaled <- assign_wsbm_scaled/max(assign_wsbm_scaled)
+
+#scale silhouette so that the high confidence of each hemisphere is 0, lowest confidence (most negative) is 1
+silhouette_scaled <- abs(silhouette_yeo7-max(silhouette_yeo7))
+silhouette_scaled <- silhouette_scaled/max(silhouette_scaled) #lowest confidence is 1, not 1.3
+
+#plot on brain to check
+colormap = colorRampPalette(c("white","pink","blue"))
+makecmap_options=list('colFn'=colormap, )
+vis.data.on.subject(subjects_dir, 'fsaverage6',assign_wsbm_scaled[1:40962], assign_wsbm_scaled[40963:81924],"inflated", makecmap_options = makecmap_options,  views="t4", rgloptions = rgloptions, draw_colorbar = T)
+
+#continuous version
+overlap <- silhouette_scaled+assign_wsbm_scaled
+hist(assign_wsbm[yeo7!=0])
+hist(silhouette_scaled[yeo7!=0])
+hist(overlap[yeo7!=0])
+rglactions=list("snapshot_png"=paste0(output_image_directory,"summed_symmetric_yeodev_confidence_inconsistency_wsbm.png"))
+colormap = colorRampPalette(c("white", "tomato2"))
+makecmap_options=list('colFn'=colormap)
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap[1:40962], overlap[40963:81924], "inflated", makecmap_options = makecmap_options,  views="t4", 
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+
+#binary version-- silhouette at 0.5 and any variability in assignment
+overlap<- ifelse(assign_wsbm_scaled>0 & silhouette_scaled>0.5, assign_wsbm_scaled+silhouette_scaled, 0)
+overlap <- overlap/max(overlap)
+rglactions=list("snapshot_png"=paste0(output_image_directory,"binarized_symmetric_yeodev_confidence_inconsistency_wsbm.png"))
+colormap = colorRampPalette(c("white","pink","blue"))
+makecmap_options=list('colFn'=colormap)
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap[1:40962], overlap[40963:81924], "inflated", makecmap_options = makecmap_options,
+                    rglactions = rglactions, views="t4", rgloptions = rgloptions, draw_colorbar = T)
+
+#silhouette_rh_scaled <- abs(silhouette_rh-max(c(silhouette_lh,silhouette_rh)))
 
 #anywhere they overlap, assign 10
 # overlap_lh <- ifelse(assign_lh>1 & silhouette_lh<0.6, 3, silhouette_lh)
@@ -857,7 +973,9 @@ overlap_rh <- silhouette_rh_scaled+assign_rh
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"summed_yeodev_confidence_inconsistence_wsbm.png"))
-vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated", colormap = colorRampPalette(c("white","white","pink","blue"), bias=0.8),  views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+colormap = colorRampPalette(c("white","white","pink","blue"), bias=0.8)
+makecmap_options=list('colFn'=colormap)
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap_lh, overlap_rh, "inflated", makecmap_options = makecmap_options,  views="t4", rgloptions = rgloptions, draw_colorbar = T)
 
 # Overlap of silhouette measure in both partitions ------------------------
 #need silhouette for WSBM vertex-wise
@@ -940,6 +1058,54 @@ sum_rh <- silhouette_rh_dev+rh_freq_perc
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"sum_yeodev_confidence_inconsistence_wsbm.png"))
 vis.data.on.subject(subjects_dir, 'fsaverage6',sum_lh, sum_rh, "inflated", colormap = colorRampPalette(c("burlywood4","burlywood3","white","white")),  views="t4", rgloptions = rgloptions, rglactions = rglactions)
+
+
+# Other maps --------------------------------------------------------------
+maps_dir='~/Documents/tools/parcellations/Brain_Organization/'
+principal_gradient_6_lh <- read.fs.morph(paste0(maps_dir,'PrincipleGradient/Gradients.lh.fsaverage6.func.gii'))
+principal_gradient_6_rh <- read.fs.morph(paste0(maps_dir,'PrincipleGradient/Gradients.rh.fsaverage6.func.gii'))
+principal_gradient <- c(principal_gradient_6_lh, principal_gradient_6_rh)
+colFn_diverging = colorRampPalette(c("burlywood4","burlywood3","white"));
+makecmap_options=list('colFn'=switch_colors)
+vis.data.on.subject(subjects_dir, 'fsaverage5',principal_gradient_6_lh ,principal_gradient_6_rh , "inflated", 
+                    colormap = colorRampPalette(c("green","blue","yellow","white")),  views="t4", rgloptions = rgloptions)
+
+principal_gradient_6_lh <- read.fs.morph(paste0(maps_dir,'AllometricScaling/lh.AllometricScaling_fsaverage5.func.gii'))
+principal_gradient_6_rh <- read.fs.morph(paste0(maps_dir,'AllometricScaling/rh.AllometricScaling_fsaverage5.func.gii'))
+principal_gradient_6_lh[principal_gradient_6_lh==0] <- NA
+principal_gradient_6_rh[principal_gradient_6_rh==0] <- NA
+colFn_diverging = colorRampPalette(c("black","white", "red"));
+makecmap_options=list('colFn'=colFn_diverging,100)
+vis.data.on.subject(subjects_dir, 'fsaverage5',principal_gradient_6_lh ,principal_gradient_6_rh , "inflated", 
+                    makecmap_options = makecmap_options,views="t4", rgloptions = rgloptions)
+
+gradients_data <- data.frame(sum, silhouette_dev,c(lh_freq, rh_freq), c(overlap_lh, overlap_rh),principal_gradient)
+cor.test(gradients_data$c.overlap_lh..overlap_rh., gradients_data$principal_gradient, type="spearman")
+ggplot(data=gradients_data, mapping = aes(x=c.overlap_lh..overlap_rh., y=principal_gradient))+
+  geom_point(aes(x = c.overlap_lh..overlap_rh., color = principal_gradient), position = position_jitter(width = .08), size = .5, alpha = 0.05) +
+  theme_bw()
+
+kruskal.test(principal_gradient~sum, data = gradients_data)
+pairwise.wilcox.test(gradients_data$sum, gradients_data$principal_gradient,
+                     p.adjust.method = "none")
+
+gradients_data %>% group_by(sum) %>% summarise_all(mean)
+
+evoexpand <- read.fs.morph(paste0(maps_dir,'./EvolutionaryExpansion/Hill2010_evo_fsaverage6.txt'))
+colFn_diverging = colorRampPalette(c("black","white", "red"));
+makecmap_options=list('colFn'=colFn_diverging,100)
+vis.data.on.subject(subjects_dir, 'fsaverage6',evoexpand ,NULL , "inflated", 
+                    makecmap_options = makecmap_options,views="t4", rgloptions = rgloptions)
+
+principal_gradient_6_lh <- read.fs.morph(paste0(maps_dir,'Myelin/MyelinMap.lh.fsaverage5.func.gii'))
+principal_gradient_6_rh <- read.fs.morph(paste0(maps_dir,'Myelin/MyelinMap.rh.fsaverage5.func.gii'))
+principal_gradient_6_lh[principal_gradient_6_lh==0] <- NA
+principal_gradient_6_rh[principal_gradient_6_rh==0] <- NA
+colFn_diverging = colorRampPalette(c("black","white","pink", "red"));
+makecmap_options=list('colFn'=colFn_diverging,100)
+vis.data.on.subject(subjects_dir, 'fsaverage5',principal_gradient_6_lh ,principal_gradient_6_rh , "inflated", 
+                    makecmap_options = makecmap_options, views="t4", rgloptions = rgloptions)
+
 
 
 #########################
