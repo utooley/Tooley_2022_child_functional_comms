@@ -529,7 +529,7 @@ g <- ggplot(data = data, aes(y = silhouette, x = yeo7, fill = yeo7)) +
 g
 
 #Stats
-kruskal.test(silhouette~yeodev, data = data)
+kruskal.test(silhouette~yeo7, data = data)
 pairwise.wilcox.test(data$silhouette, data$yeodev,
                      p.adjust.method = "bonferroni")
 
@@ -792,6 +792,7 @@ gloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"confidence_wsbm.png"))
 vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  silhouette_wsbm_lh,
                              silhouette_wsbm_rh, colormap=colorRampPalette(c("burlywood4","burlywood3","white","white", "white")), "inflated", views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+
 # Plot variance in community assignment by Yeo7 system ------------------------
 source("~/Documents/tools/raincloud.R")
 library(Hmisc)
@@ -909,6 +910,66 @@ g <- ggplot(data = sumld, aes(y = perc_varying_assign, x = wsbm, fill = wsbm)) +
   raincloud_theme
 g
 
+#Stats
+kruskal.test(freq~wsbm, data = data)
+pairwise.wilcox.test(data$freq, data$wsbm,
+                     p.adjust.method = "bonferroni")
+
+# Stats for overleaf output -----------------------------------------------
+#load cognition data from ABCD from "cognition_analyses" file.
+
+#Education
+main_yeodev$demo_prtnr_ed_v2
+#parent edu variable
+summary(main_yeodev$demo_prnt_ed_v2)
+main_yeodev$demo_prnt_ed_num_v2 <- as.numeric(main_yeodev$demo_prnt_ed_v2)
+main_yeodev$demo_prnt_ed_num_v2_recoded <- recode(as.character(main_yeodev$demo_prnt_ed_v2), "0=0; 1=1; 2=2; 3=3; 4=4; 5=5; 6=6; 7=7; 8=8; 9=9; 10=10; 11=11; 12=12; 13=12; 14=12; 15=13; 16=14; 17=14; 18=16; 19=18; 20=20; 21=20; 777= NA; 999 = NA")
+main_yeodev$demo_prnt_ed_num_v2_recoded <- as.numeric(main_yeodev$demo_prnt_ed_num_v2_recoded)
+
+#partner edu variable
+summary(main_yeodev$demo_prtnr_ed_v2)
+main_yeodev$demo_prtnr_ed_num_v2 <- as.numeric(main_yeodev$demo_prtnr_ed_v2)
+main_yeodev$demo_prtnr_ed_num_v2_recoded <- recode(as.character(main_yeodev$demo_prtnr_ed_v2), "0=0; 1=1; 2=2; 3=3; 4=4; 5=5; 6=6; 7=7; 8=8; 9=9; 10=10; 11=11; 12=12; 13=12; 14=12; 15=13; 16=14; 17=14; 18=16; 19=18; 20=20; 21=20; 777= NA; 999 = NA")
+main_yeodev$demo_prtnr_ed_num_v2_recoded <- as.numeric(main_yeodev$demo_prtnr_ed_num_v2_recoded)
+
+#creating a combined parent education variable
+main_yeodev$demo_comb_parent_edu <- rowMeans(main_yeodev[c('demo_prnt_ed_num_v2_recoded', 'demo_prtnr_ed_num_v2_recoded')], na.rm=TRUE)
+View(main_yeodev$demo_comb_parent_edu)
+hist(as.numeric(main_yeodev$demo_comb_parent_edu), xlab = "Combined averaged years of parent education", breaks = 15, label = TRUE, col = "red")
+median(main_yeodev$demo_comb_parent_edu)
+
+save(main_yeodev, file="~/Downloads/Demo_data.Rdata")
+load("Demo_data.Rdata")
+
+wsbm_full <- c(wsbm_lh,wsbm_rh)
+#save(yeo_dev_full, yeo_full, wsbm_full, file="~/Downloads/Partition_comparisons.RData")
+save(yeo_dev_full, yeo_full, wsbm_full,NMI_yeodev_yeo7, NMI_wsbm_yeo7, NID_wsbm_yeo7, NID_yeodev_yeo7, file="~/Downloads/Partition_comparison_stats.RData")
+
+#NMI
+NMI_yeodev_yeo7<- compare(yeo_dev_full, yeo_full, method = "nmi")
+NID_yeodev_yeo7<- clustComp(yeo_dev_full, yeo_full)$NID
+
+NMI_wsbm_yeo7<- compare(wsbm_full, yeo_full, method = "nmi")
+NID_wsbm_yeo7<- clustComp(wsbm_full, yeo_full)$NID
+
+#Confidence & variability
+silhouette_yeo <- c(silhouette_lh_fs6,silhouette_rh_fs6)
+silhouette_dev <- c(silhouette_lh_dev,silhouette_rh_dev)
+subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
+wsbm_rh <- subject.annot(subjects_dir, 'fsaverage6', 'rh','wsbm.freq.fsaverage6');wsbm_rh<- as.numeric(as.character(wsbm_rh$label_names))
+wsbm_lh <- subject.annot(subjects_dir, 'fsaverage6', 'lh','wsbm.freq.fsaverage6');wsbm_lh<- as.numeric(as.character(wsbm_lh$label_names))
+freq <- c(wsbm_lh, wsbm_rh)
+
+#WSBM variability by parcel
+#yeo_nodes=read.table('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt', col.names = "yeo_nodes")
+yeo_nodes <- as.character(yeo_nodes$yeo_nodes)
+#Read in the frequency of ties in the group WSBM partition
+z <- readMat(paste0(wsbm_datadir,"consensus_iter_mode.mat"), drop = )
+freq<- t(z$freq)
+consensus_iterative_labels <- partitions$consensus.iter.mode.yeorelabeled
+
+save(silhouette_dev, yeo_dev_full, silhouette_yeo, freq, yeo_nodes,consensus_iterative_labels, file="~/Downloads/confidence_variability.RData")
+
 # Overlap of variability in WSBM and Yeo Dev ------------------------------
 subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/wsbm_consensus/"
@@ -939,7 +1000,7 @@ silhouette_scaled <- silhouette_scaled/max(silhouette_scaled) #lowest confidence
 
 #plot on brain to check
 colormap = colorRampPalette(c("white","pink","blue"))
-makecmap_options=list('colFn'=colormap, )
+makecmap_options=list('colFn'=colormap)
 vis.data.on.subject(subjects_dir, 'fsaverage6',assign_wsbm_scaled[1:40962], assign_wsbm_scaled[40963:81924],"inflated", makecmap_options = makecmap_options,  views="t4", rgloptions = rgloptions, draw_colorbar = T)
 
 #continuous version
@@ -948,7 +1009,7 @@ hist(assign_wsbm[yeo7!=0])
 hist(silhouette_scaled[yeo7!=0])
 hist(overlap[yeo7!=0])
 rglactions=list("snapshot_png"=paste0(output_image_directory,"summed_symmetric_yeodev_confidence_inconsistency_wsbm.png"))
-colormap = colorRampPalette(c("white", "tomato2"))
+colormap = colorRampPalette(c("white", "#c48a69"))
 makecmap_options=list('colFn'=colormap)
 vis.data.on.subject(subjects_dir, 'fsaverage6',overlap[1:40962], overlap[40963:81924], "inflated", makecmap_options = makecmap_options,  views="t4", 
                     rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
@@ -993,10 +1054,10 @@ silhouette_wsbm <- z$silhouette.wsbm.0.diag
 silhouette_wsbm_lh=as.list(setNames(c(NA, silhouette_wsbm[1:200]), schaefer_atlas_region_names_lh))
 silhouette_wsbm_rh=as.list(setNames(c(NA, silhouette_wsbm[201:400]), schaefer_atlas_region_names_rh))
 #write it out to an atlas file with the regions
-write.region.values(subjects_dir,'fsaverage6', 'lh', 'Schaefer2018_400Parcels_7Networks_order', silhouette_wsbm_lh,
-                    'silhouette_wsbm_fsaverage6', output_path=output_image_directory)
-write.region.values(subjects_dir,'fsaverage6', 'rh', 'Schaefer2018_400Parcels_7Networks_order', silhouette_wsbm_rh,
-                    'silhouette_wsbm_fsaverage6', output_path=output_image_directory)
+# write.region.values(subjects_dir,'fsaverage6', 'lh', 'Schaefer2018_400Parcels_7Networks_order', silhouette_wsbm_lh,
+#                     'silhouette_wsbm_fsaverage6', output_path=output_image_directory)
+# write.region.values(subjects_dir,'fsaverage6', 'rh', 'Schaefer2018_400Parcels_7Networks_order', silhouette_wsbm_rh,
+#                     'silhouette_wsbm_fsaverage6', output_path=output_image_directory)
 #read it in
 silhouette_wsbm_lh <- read.fs.mgh(paste0(output_image_directory,'lh.silhouette_wsbm_fsaverage6.mgz'))
 silhouette_wsbm_rh <- read.fs.mgh(paste0(output_image_directory,'rh.silhouette_wsbm_fsaverage6.mgz'))
@@ -1004,13 +1065,40 @@ silhouette_wsbm_rh <- read.fs.mgh(paste0(output_image_directory,'rh.silhouette_w
 #Confidence for Yeo Dev, mapping the 1's to the max value of confidence
 silhouette_lh <-  ifelse(yeo_dev_partition$lh.s==1, max(yeo_dev_partition$lh.s[yeo_dev_partition$lh.s!=1]),yeo_dev_partition$lh.s) #this is in fsaverage6 space, so 40k vertices
 silhouette_rh <-  ifelse(yeo_dev_partition$rh.s==1, max(yeo_dev_partition$rh.s[yeo_dev_partition$rh.s!=1]),yeo_dev_partition$rh.s) #this is in fsaverage6 space, so 40k vertices
+silhouette_yeo7 <- c(silhouette_lh, silhouette_rh)
 
 #read it in
 silhouette_wsbm_lh <- read.fs.mgh(paste0(output_image_directory,'lh.silhouette_wsbm_fsaverage6.mgz'), flatten = T)
 silhouette_wsbm_rh <- read.fs.mgh(paste0(output_image_directory,'rh.silhouette_wsbm_fsaverage6.mgz'), flatten = T)
-silhouette_wsbm_lh[is.na(silhouette_wsbm_lh)] <- 0
-silhouette_wsbm_rh[is.na(silhouette_wsbm_rh)] <- 0
+silhouette_wsbm_lh[is.na(silhouette_wsbm_lh)] <- max(silhouette_wsbm_lh[!is.na(silhouette_wsbm_lh)])
+silhouette_wsbm_rh[is.na(silhouette_wsbm_rh)] <- max(silhouette_wsbm_rh[!is.na(silhouette_wsbm_rh)])
 #Normalize them both to [0,1]
+
+#want to make one go up and one go down in different colors, and where they overlap is both
+silhouette_wsbm <- c(silhouette_wsbm_lh, silhouette_wsbm_rh)#this ends up on -0.64-0.79, but I want 0-1 for comparison with the silhouette measure
+silhouette_wsbm_scaled <- abs(silhouette_wsbm-max(silhouette_wsbm))
+silhouette_wsbm_scaled <- silhouette_wsbm_scaled/max(silhouette_wsbm_scaled)
+
+#scale silhouette so that the high confidence of each hemisphere is 0, lowest confidence (most negative) is 1
+silhouette_scaled <- abs(silhouette_yeo7-max(silhouette_yeo7))
+silhouette_scaled <- silhouette_scaled/max(silhouette_scaled) #lowest confidence is 1, not 1.3
+
+#plot on brain to check
+colormap = colorRampPalette(c("white","pink","blue"))
+makecmap_options=list('colFn'=colormap)
+vis.data.on.subject(subjects_dir, 'fsaverage6',silhouette_wsbm_scaled[1:40962], silhouette_wsbm_scaled[40963:81924],"inflated", makecmap_options = makecmap_options,  views="t4", rgloptions = rgloptions, draw_colorbar = T)
+
+#continuous version
+overlap <- silhouette_scaled+silhouette_wsbm_scaled
+hist(silhouette_wsbm_scaled[yeo7!=0])
+hist(silhouette_scaled[yeo7!=0])
+hist(overlap[yeo7!=0])
+rglactions=list("snapshot_png"=paste0(output_image_directory,"summed_symmetric_yeodev_confidence_wsbm_confidence.png"))
+colormap = colorRampPalette(c("white", "#ab7150"), space = 'rgb') #one shade darker
+makecmap_options=list('colFn'=colormap)
+vis.data.on.subject(subjects_dir, 'fsaverage6',overlap[1:40962], overlap[40963:81924], "inflated", makecmap_options = makecmap_options,  views="t4", 
+                    rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
+
 silhouette_wsbm_lh_norm<- (silhouette_wsbm_lh-min(silhouette_wsbm_lh))/(max(silhouette_wsbm_lh)-min(silhouette_wsbm_lh))
 silhouette_wsbm_rh_norm<- (silhouette_wsbm_rh-min(silhouette_wsbm))/(max(silhouette_wsbm)-min(silhouette_wsbm))
 silhouette_yeodev_lh_norm<- (silhouette_lh-min(silhouette_lh))/(max(silhouette_lh)-min(silhouette_lh))

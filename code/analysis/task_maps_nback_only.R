@@ -229,6 +229,7 @@ vis.data.on.subject(subjects_dir, 'fsaverage6', yeo7_6_betas[0:40962], yeo7_6_be
 #########################################
 ### Bootstrap Dice coefficient--WSBM ####
 #########################################
+load("~/Documents/projects/in_progress/spatial_topography_CUBIC/data/bootstrapped_CIs_frontoparietal.RData")
 wsbm_to_nback <- data.frame(wsbm_6,nback_2_vs_0_top)
 dice_wsbm_Boot_CI<-function(x,indices){
   tempdat<-wsbm_to_nback[indices,]
@@ -283,7 +284,7 @@ longdata <- longdata[longdata$value != 0.0000000,]#remove the medial wall
 longdata <- longdata[longdata$value > 0,]#remove the medial wall
 colnames(longdata) <- c('partition', 'betas')
 longdata$partition <- factor(longdata$partition,levels = c("wsbm","yeo_dev","yeo7"))
-longdata = longdata %>% mutate(partition=partition) %>% 
+longdata = longdata %>% 
   dplyr::group_by(partition) %>% 
   mutate(med = median(betas))
 
@@ -308,7 +309,7 @@ g <- ggplot(data = longdata, aes(y = betas, x = partition, fill = med)) +
   raincloud_theme
 g
 
-longdata %>% group_by(partition) %>% summarise_all(mean)
+longdata %>% group_by(partition) %>% summarise_all(sd)
 #Stats
 kruskal.test(betas~partition, data = longdata)
 pairwise.wilcox.test(longdata$betas, longdata$partition,
@@ -433,7 +434,6 @@ set.seed(598370)
 results_yeo7 <- boot(data=yeo7_to_nback, statistic=dice_yeo7_Boot_CI, R=1000, simple=TRUE, parallel="multicore")
 CI_yeo7_7 <- boot.ci(results_yeo7, type="basic")
 CI_yeo7_7 <- boot.ci(results_yeo7, type="perc")
-CI_yeo7_7
 boot.ci(results_yeodev, type = "bca")
 
 save(results_yeo7, results_yeodev, results_wsbm, file= paste0("~/Documents/projects/in_progress/spatial_topography_CUBIC/data/bootstrapped_CIs_default.RData"))
@@ -495,12 +495,22 @@ g <- ggplot(data = longdata, aes(y = betas, x = partition, fill=med)) +
   raincloud_theme
 g
 
-longdata %>% group_by(partition) %>% summarise_all(median)
+longdata %>% group_by(partition) %>% summarise_all(sd)
 
 #Stats
 kruskal.test(betas~partition, data = longdata)
 pairwise.wilcox.test(longdata$betas, longdata$partition,
                      p.adjust.method = "bonferroni")
+
+# Stats for overleaf ------------------------------------------------------
+#Task maps dice coefficients
+task_betas_fp <- longdata
+task_betas_dm <- longdata
+
+CI_yeodev_6$percent[1,5]
+save(task_betas_fp,wsbm_to_nback_6, yeo_dev_to_nback_6,yeo_adult_to_nback_6,task_betas_dm,
+     wsbm_to_nback_7, yeo_dev_to_nback_7, yeo_adult_to_nback_7, CI_yeo7_7, CI_wsbm_7, CI_yeodev_7, CI_yeo7_6, 
+     CI_yeodev_6, CI_wsbm_6, file= "~/Downloads/Task_map_data.RData")
 
 #########################
 # HCP Adult N-back Task Map #
@@ -578,10 +588,10 @@ wsbm_7 =ifelse(wsbm==7,1,0)
 yeo_dev_7=ifelse(yeo_dev==7,1,0)
 yeo7_7=ifelse(yeo7==7,1,0)#about the same as yeo_dev
 
-wsbm_to_nback <- mclustcomp(wsbm_7,nback_2_vs_0_bottom, types = c("jaccard", "sdc")) #for binary vectors
-yeo_dev_to_nback <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
-yeo_adult_to_nback <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
-cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
+wsbm_to_nback_7 <- mclustcomp(wsbm_7,nback_2_vs_0_bottom, types = c("jaccard", "sdc")) #for binary vectors
+yeo_dev_to_nback_7 <- mclustcomp(yeo_dev_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
+yeo_adult_to_nback_7 <-  mclustcomp(yeo7_7,nback_2_vs_0_bottom,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(yeo_adult_to_nback_7,yeo_dev_to_nback_7,wsbm_to_nback_7)
 
 ##### Sum of betas within the system ####
 yeo7_7_betas <- ifelse(yeo7_7==1, nback_2_vs_0_perf, 0)
@@ -641,10 +651,10 @@ wsbm_6 =ifelse(wsbm==6,1,ifelse(wsbm==3,1,0))
 yeo_dev_6=ifelse(yeo_dev==6,1,ifelse(yeo_dev==3,1,0))
 yeo7_6=ifelse(yeo7==6,1,ifelse(yeo7==3,1,0))#about the same as yeo_dev
 
-wsbm_to_nback <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
-yeo_dev_to_nback <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
-yeo_adult_to_nback <-  mclustcomp(yeo7_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
-cbind(yeo_adult_to_nback,yeo_dev_to_nback,wsbm_to_nback)
+wsbm_to_nback_6 <- mclustcomp(wsbm_6,nback_2_vs_0_top, types = c("jaccard", "sdc")) #for binary vectors
+yeo_dev_to_nback_6 <- mclustcomp(yeo_dev_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
+yeo_adult_to_nback_6 <-  mclustcomp(yeo7_6,nback_2_vs_0_top,  types = c("jaccard", "sdc")) #for binary vectors
+cbind(yeo_adult_to_nback_6,yeo_dev_to_nback_6,wsbm_to_nback_6)
 
 ##### Sum of betas within the system ####
 yeo7_6_betas <- ifelse(yeo7_6==1, nback_2_vs_0_perf, 0)
@@ -666,7 +676,7 @@ data <- data.frame(yeo7_6_betas, yeo_dev_6_betas, wsbm_6_betas)
 colnames(data) <- c('yeo7', 'yeo_dev', 'wsbm')
 longdata <- melt(data)
 longdata <- longdata[longdata$value != 0.0000000,]#remove the medial wall
-longdata <- longdata[longdata$value > 0,]#remove the medial wall
+longdata <- longdata[longdata$value > 0,]#remove negatives
 colnames(longdata) <- c('partition', 'betas')
 
 ## Raincloud plot
@@ -693,9 +703,6 @@ g
 kruskal.test(betas~partition, data = longdata)
 pairwise.wilcox.test(longdata$betas, longdata$partition,
                      p.adjust.method = "bonferroni")
-
-
-
 # Unneeded gifti brainstorming --------------------------------------------
 library(gifti)
 library(cifti)
