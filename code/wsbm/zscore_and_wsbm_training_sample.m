@@ -18,6 +18,12 @@ z_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_t
 noz_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400Networks'
 z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
 wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample'
+addpath(genpath('/data/picsl/mackey_group/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal'))
+addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/WSBM_v1.2'))
+addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/BCT'))
+addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/NCT'))
+addpath(genpath('/cbica/projects/spatial_topography/tools/matlab/'))
+
 
 %get the subject list,excluding those who have NAs
 %subjlist=readtable(fullfile(listdir,'n27_cohort_file_one_run_only_21019.csv'),'Delimiter',',')
@@ -168,7 +174,7 @@ densities={'0.5','0.7'}
 wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/'
 z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
 
-for m=1:length(density)
+for m=1:length(densities)
     density=densities{m}
 for n=1:height(subjlist)
     sub=char(subjlist.id(n)) %look at this
