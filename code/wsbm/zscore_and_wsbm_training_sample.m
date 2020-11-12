@@ -12,12 +12,12 @@ addpath(genpath('/home/utooley/matlab/'))
 
 %running with the cluster mounted locally
 %CHECK WHERE ON THE CLUSTER IS MOUNTED EXACTLY-THAT MAY MESS THIS UP
-datadir=fullfile('~/Desktop/cluster/jux/mackey_group/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek')
-listdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16/parcellation'
-z_outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site16_training_sample/Schaefer400zNetworks'
-noz_outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site16_training_sample/Schaefer400Networks'
-z_avg_outdir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
-wsbm_dir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample'
+datadir=fullfile('/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek')
+listdir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/parcellation'
+z_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zNetworks'
+noz_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400Networks'
+z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
+wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample'
 
 %get the subject list,excluding those who have NAs
 %subjlist=readtable(fullfile(listdir,'n27_cohort_file_one_run_only_21019.csv'),'Delimiter',',')
@@ -83,9 +83,8 @@ for n=1:height(subjlist)
   end
 end
 
-
 %% Run WBSM model signed matrices with different values of k
-wsbm_dir='~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/search_over_k'
+wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/search_over_k'
 %on cluster
 wsbm_dir='/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/search_over_k'
 %add a loop for different values of k (communities)?
@@ -123,6 +122,87 @@ for k=1:7 %change this to be the right range
 %save subject-level variables.
 outfile=dataset(subjlist, sub_log_lik_for_weights, sub_log_lik_for_edges, sub_log_evidence, sub_unique_labels, sub_labels)
 export(outfile,'File',fullfile(wsbm_dir,'wsbm_search_over_k_n670_site16_30trials.csv'),'Delimiter',',')
+%% Run WSBM with just k=7
+k=7
+wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/'
+z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
+
+for n=1:height(subjlist)
+    sub=char(subjlist.id(n)) %look at this
+    outfile=fullfile(wsbm_dir,strcat(thresh_50',sub,'_wsbm.mat'))
+    if (exist(outfile)==2) %if it's already written don't do it again
+        fprintf('Sub %s already exists. \n', sub);
+    else
+    file=fullfile(z_avg_outdir,strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
+    try
+    subfcmat=load(file);
+    %threshold HERE
+    [Labels Model]=wsbm(subfcmat, k,'E_Distr','None', 'W_Distr', 'Normal', 'numTrials', 50, 'verbosity', 1, 'alpha', 0, 'parallel', 0);
+    %logHw - Additive Log-likelihood constant for W_Distr
+    sub_log_lik_for_weights(n,1)=Model.Data.logHw;
+    %logHe - Additive Log-likelihood constant for E_Distr
+    sub_log_lik_for_edges(n,1)=Model.Data.logHe;
+    %LogEvidence - Marginal Log-likelihood (aka Log-Evidence), a model selection criterion 
+    sub_log_evidence(n,1)=Model.Para.LogEvidence;
+    %a row for each subject's labels for the k=7 partition
+    sub_labels(n,:)=Labels;
+    %Look at how many unique labels were output, since Rick says these might be
+    %different
+    sub_unique_labels(n,1)=numel(unique(Labels));
+    models(n, :)=Model;
+    %save the model
+    outfile= fullfile(wsbm_dir,strcat(sub,'_wsbm.mat'))
+    save(outfile, 'Model', 'Labels')
+    catch
+    fprintf('Cant read sub %s, skipped. \n', sub);
+    end
+    end
+end
+
+outfile=dataset(subjlist, sub_log_lik_for_weights, sub_log_lik_for_edges, sub_log_evidence, sub_unique_labels, sub_labels)
+export(outfile,'File',fullfile(wsbm_dir,'wsbm_k7_n670_site16_50trials.csv'),'Delimiter',',')
+
+%% Run WSBM with threshold at 50% and 70% density
+k=7
+densities={'0.5','0.7'}
+wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/'
+z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
+
+for m=1:length(density)
+    density=densities{m}
+for n=1:height(subjlist)
+    sub=char(subjlist.id(n)) %look at this
+    outfile=fullfile(wsbm_dir,strcat('thresh_',density,'/',sub,'_wsbm_thresh.mat'))
+    if (exist(outfile)==2) %if it's already written don't do it again
+        fprintf('Sub %s already exists. \n', sub);
+    else
+    file=fullfile(z_avg_outdir,strcat(sub,'_avg_Schaefer400x7_znetwork.txt'));
+    try
+    subfcmat=load(file);
+    subfcmat=threshold_proportional(subfcmat, density);
+    [Labels Model]=wsbm(subfcmat, k,'E_Distr','None', 'W_Distr', 'Normal', 'numTrials', 50, 'verbosity', 1, 'alpha', 0, 'parallel', 0);
+    %logHw - Additive Log-likelihood constant for W_Distr
+    sub_log_lik_for_weights(n,1)=Model.Data.logHw;
+    %logHe - Additive Log-likelihood constant for E_Distr
+    sub_log_lik_for_edges(n,1)=Model.Data.logHe;
+    %LogEvidence - Marginal Log-likelihood (aka Log-Evidence), a model selection criterion 
+    sub_log_evidence(n,1)=Model.Para.LogEvidence;
+    %a row for each subject's labels for the k=7 partition
+    sub_labels(n,:)=Labels;
+    %Look at how many unique labels were output, since Rick says these might be
+    %different
+    sub_unique_labels(n,1)=numel(unique(Labels));
+    models(n, :)=Model;
+    %save the model
+    save(outfile, 'Model', 'Labels')
+    catch
+    fprintf('Cant read sub %s, skipped. \n', sub);
+    end
+    end
+end
+outfile=dataset(subjlist, sub_log_lik_for_weights, sub_log_lik_for_edges, sub_log_evidence, sub_unique_labels, sub_labels)
+export(outfile,'File',fullfile(wsbm_dir,strcat('thresh_',density),'wsbm_k7_n670_site16_thresh_50trials.csv'),'Delimiter',',')
+end
 
 %% Relabel community partitions to be most parsimonious across subjects, create a consensus partition
 yeo_nodes=dlmread('~/Desktop/cluster/picsl/mackey_group/tools/schaefer400/schaefer400x7CommunityAffiliation.1D.txt')
@@ -198,7 +278,7 @@ p2(p==1)=NaN;
 node_entropy = -nansum(p.*log2(p))';        % entropy
 
 %save these outfiles
-outfile=('~/Desktop/cluster/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/imageData/wsbm/site16_training_sample/brains/consensus_iter_freq_entr.mat'))
+outfile=('/cbica/projects/spatial_topography//data/imageData/wsbm/site16_training_sample/brains/consensus_iter_freq_entr.mat'))
 save(outfile, 'freq', 'node_entropy')
 %% Relabel the consensus representative and group partitions so they are visually comparable to Yeo
 %relabel the consensus partitions so that they are visually comparable to Yeo
