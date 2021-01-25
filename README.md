@@ -1,14 +1,14 @@
 
 ## Tooley et al., 2021
 
-This repo contains code accompanying the manuscript *Functional brain network community structure in childhood: Unfinished territories and fuzzy boundaries*, as well as data imported directly into the manuscript. We provide two freely available partitions (assignments of regions to communities, also sometimes called networks), that were estimated using data from children ages 9-11.
+This repo contains code accompanying the manuscript [Functional brain network community structure in childhood: Unfinished territories and fuzzy boundaries](https://www.biorxiv.org/content/10.1101/2021.01.21.427677v1), as well as data imported directly into the manuscript. We provide two freely available partitions (assignments of regions to communities, also sometimes called networks), that were estimated using data from children ages 9-11.
 
-For more details, see the preprint [here](https://www.biorxiv.org/content/10.1101/2021.01.21.427677v1)!
+For more details, see the [preprint](https://www.biorxiv.org/content/10.1101/2021.01.21.427677v1)!
 
 
 ## Code
 
-Preprocessing was conducted using fMRIprep (link) and xcpEngine (link. Code used in this repo depends heavily on that of the Computational Brain Imaging Group (https://github.com/ThomasYeoLab/CBIG), which must be set up to run functions in the `code/yeo_networks` folder. The weighted stochastic block model (WSBM) was employed using code from Aicher et al. (2015), found [here](https://aaronclauset.github.io/wsbm/).
+Preprocessing was conducted using fMRIprep (link) and xcpEngine (link). Code used in this repo depends heavily on that of the Computational Brain Imaging Group (https://github.com/ThomasYeoLab/CBIG), which must be set up to run functions in the `code/yeo_networks` folder. The weighted stochastic block model (WSBM, `code/wsbm`) was employed using code from Aicher et al. (2015), found [here](https://aaronclauset.github.io/wsbm/).
 
 ## Partitions
 
