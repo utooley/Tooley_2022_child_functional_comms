@@ -14,7 +14,7 @@ Preprocessing was conducted using fMRIprep (link) and xcpEngine (link). Code use
 
 (Image here of brains)
 
-Both the developmental clustering partition and the developmental WSBM are provided in xxx and xxx space in `brains`. The WSBM is also provided as a vector of assignments for the Schaefer xx parcellation, available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal).
+Both the developmental clustering partition and the developmental WSBM are provided in xxx and xxx space in `brains`. The WSBM is also provided as a vector of assignments for the Schaefer 400-region parcellation, available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal).
 
 ## Manuscript
 
