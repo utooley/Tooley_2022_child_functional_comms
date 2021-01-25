@@ -1,6 +1,0 @@
-for sub in `ls`:
-do
-dicom=`find ${sub}/ses-baselineYear1Arm1/func/*/${sub}*.dcm -print -quit`
-echo $sub >> slice_times_site14.txt
-dicom_hdr -slice_times $dicom >> slice_times_site14.txt
-done 

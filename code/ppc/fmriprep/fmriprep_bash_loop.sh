@@ -4,8 +4,8 @@
 #unset PYTHONPATH;
 URSULA_PROJ=/data/jux/mackey_group/Ursula/projects/in_progress
 ERROR_DIR=/data/jux/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/output/job_output
-SUBLIST_DIR=${URSULA_PROJ}/spatial_topography_parcellations_ABCD/data/subjLists/release2/site14site16
-SUB_FILE=${SUBLIST_DIR}/n611_release2_site14site16_0.2mm.txt
+SUBLIST_DIR=${URSULA_PROJ}/spatial_topography_parcellations_ABCD/data/subjLists/release2/site16
+SUB_FILE=${SUBLIST_DIR}/n698_release2_site16_0.2mm_bids.txt
 SCRIPTS_DIR=${URSULA_PROJ}/spatial_topography_parcellations_ABCD/code/ppc/fmriprep
 output_dir=/data/jux/mackey_group/public_data/ABCD/bids_release2_site14site16/derivatives/fmriprep
 user=`whoami`
@@ -22,6 +22,6 @@ sleep .5
 # else
 #   echo $sub
 #   echo 'it doesnt exist'
-  qsub -q all.q,basic.q,himem.q -o $ERROR_DIR ${SCRIPTS_DIR}/fmriprep_cmd2.sh ${sub}
+  qsub -q all.q,basic.q,himem.q -o $ERROR_DIR ${SCRIPTS_DIR}/fmriprep_cmd.sh ${sub}
 # fi
 done

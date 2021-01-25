@@ -1,5 +1,0 @@
-for line in `cat /data/picsl/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData/AWS_threesite_0.3mm_rest_T1s.txt`;
-do
-echo ${line}
-aws s3 cp ${line} /data/picsl/mackey_group/Ursula/projects/in_progress/spatial_topography_parcellations_ABCD/data/subjData
-done

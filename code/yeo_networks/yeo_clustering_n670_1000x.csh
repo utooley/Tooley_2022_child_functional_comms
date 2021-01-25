@@ -1,6 +1,6 @@
 #!/bin/csh
 
-#run this with qsub -l h_vmem=50.0G,s_vmem=49.7G -j y -o ${SPATIAL_TOPOGRAPHY}/output/job_output/ -cwd /cbica/projects/spatial_topography/code/yeo_networks/yeo_clustering_n670_1000x.csh
+#run this on SGE with qsub -l h_vmem=50.0G,s_vmem=49.7G
 
 set output_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries_nobin"
 set cluster_out = "${output_dir}/yeo7_n670_2runsonly_1000tries_nobin" #CHANGE THIS!
@@ -21,9 +21,7 @@ foreach s ($subjects)
 	set s_id = `echo $s | cut -d '_' -f 1`
 	set sess_id = `echo $s | cut -d '_' -f 2`
 	mkdir -p $output_dir/subjects/$s
-#	ln -s $orig_data_dir/$s_id/$s/qc $output_dir/subjects/$s/
 	ln -s $orig_data_dir/$s_id/surf $output_dir/subjects/$s/
-#	ln -s $orig_data_dir/$s_id/logs $output_dir/subjects/$s/
 end
 
 
@@ -32,7 +30,7 @@ mkdir -p $output_dir/clustering
 #skip the creation of the subject list since I already have them
 
 #call the compute function for FC profiles for each subject
-#add outlier list with 	-outlier_ls ${outlier_list}
+#can add outlier list with 	-outlier_ls ${outlier_list}
 ${code_dir}/CBIG_Yeo2011_compute_fcMRI_surf2surf_profiles_subjectlist.csh -sd ${sub_dir} -sub_ls ${sub_list} -surf_ls ${surf_list} -target $target -roi $roi
 
 #Call the clustering function to cluster FC profiles for each subject
