@@ -8,13 +8,13 @@ For more details, see the [preprint](https://www.biorxiv.org/content/10.1101/202
 
 ## Code
 
-Preprocessing was conducted using fMRIprep (link) and xcpEngine (link). Code used in this repo depends heavily on that of the Computational Brain Imaging Group (https://github.com/ThomasYeoLab/CBIG), which must be set up to run functions in the `code/yeo_networks` folder. The weighted stochastic block model (WSBM, `code/wsbm`) was employed using code from Aicher et al. (2015), found [here](https://aaronclauset.github.io/wsbm/).
+Preprocessing was conducted using fMRIprep (https://fmriprep.org/en/stable/) and xcpEngine (https://xcpengine.readthedocs.io/). Code used in this repo depends heavily on that of the Computational Brain Imaging Group (https://github.com/ThomasYeoLab/CBIG), which must be set up to run functions in the `code/yeo_networks` folder. The weighted stochastic block model (WSBM, `code/wsbm`) was employed using code from Aicher et al. (2015), found [here](https://aaronclauset.github.io/wsbm/).
 
 ## Partitions
 
-(Image here of brains)
+![image](cover_fig.png)
 
-Both the developmental clustering partition and the developmental WSBM are provided in xxx and xxx space in `brains`. The WSBM is also provided as a vector of assignments for the Schaefer 400-region parcellation, available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal).
+Both the developmental clustering partition and the developmental WSBM are provided in fsaverage6, MNI152, and fs_LR 32k space in the `partitions` folder. The WSBM is also provided as a vector of assignments for the Schaefer 400-region parcellation, available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal).
 
 ## Manuscript
 

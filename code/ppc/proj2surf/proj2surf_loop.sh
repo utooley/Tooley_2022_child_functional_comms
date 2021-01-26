@@ -1,7 +1,7 @@
 export SUBJECTS_DIR=/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/freesurfer
 data_dir=/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols
 out_dir=/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/surfaces
-scripts_dir=/cbica/projects/spatial_topography/code/parcellation
+scripts_dir=/cbica/projects/spatial_topography/code/proj2surf
 
 subjlist=/cbica/projects/spatial_topography/data/subjLists/release2/site16/n670_filtered_runs_site16_postprocess.csv
 
