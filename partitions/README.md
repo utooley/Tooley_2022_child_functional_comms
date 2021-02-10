@@ -1,6 +1,7 @@
 # Partitions
 
 ![image](../cover_fig.png)
+Both the developmental clustering partition and the developmental WSBM are provided in `fsaverage6`, `MNI152`, and `fs_LR 32k` space. The adult clustering partition was estimated by Yeo _et al._ in their [2011 paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3174820/), and is available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Yeo2011_fcMRI_clustering).
 
 ## fsaverage6
 This folder contains partitions in the `fsaverage6` space. The structure of this folder follows that of a preprocessed Freesurfer subject. In particular, fsaverage6/label/ contains the partition files, and fsaverage6/surf contains the fsaverage6 surfaces needed to visualize the partition.

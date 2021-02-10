@@ -5,7 +5,7 @@ library(igraph)
 library(aricode)
 library(data.table)
 
-# Load in data to make demo data ------------------------------------------
+#Load in ABCD demographic data
 data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
 output_data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
 subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/'
@@ -30,26 +30,7 @@ income$ID <- income$subjectkey
 main<- left_join(sites,socio, by=c("ID", "eventname"))
 main <- left_join(main, income, by=c("ID", "eventname"))
 
-##need to get XCP mean FD and # of outliers and control for that
-runs <- read.csv(paste0(subjlist_dir,'parcellation/n670_filtered_runs_site16_postprocess.csv'))
-runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
-runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
-#read in the list of runs that were used and merge it with xcp qa vars
-qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols/XCP_QAVARS_with_nVols.csv"))
-qa_vars <- rename(qa_vars, ID=id0, run=id1)
-qa <- left_join(runs, qa_vars, by=c("ID", "run"))
-
-# Data cleaning -----------------------------------------------------------
-#summarize motion and merge in
-#make summary variables of volumes and censored volumes
-qa <- qa %>% group_by(ID) %>% mutate(totalnVolCensored=sum(nVolCensored), totalSizet=sum(nVols)) %>% ungroup()
-
-qa <- qa %>% mutate(perc_vols=nVols/totalSizet, relMeanRMSMotion_weight=relMeanRMSMotion*perc_vols, pctSpikesFD_weight=pctSpikesFD*perc_vols) %>% group_by(ID) %>% 
-  mutate(fd_mean_avg=sum(relMeanRMSMotion_weight), pctVolsCensored=(totalnVolCensored/totalSizet), pctSpikesFD_avg=sum(pctSpikesFD_weight)) %>% select(fd_mean_avg, pctVolsCensored, pctSpikesFD_avg, totalSizet)
-#average motion across the two runs, weighted by the length of each run as a percentage of the total, same for percent spikes FD. select only the averaged variables
-qa <- qa[!duplicated(qa$ID), ]
-
-#Only baseline visits from cognition
+#Only baseline visits
 main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site16") #filter out only the baseline visits
 #for site 16 only
 subjlist1 <- read.table(paste0(subjlist_dir, "/n670_subjects_only_filtered_runs_site16_postprocess.txt"), col.names = c("ID"))
@@ -61,12 +42,7 @@ main$age <- as.numeric(main$interview_age.x)/12
 #make sex a factor
 main$gender <- as.factor(main$gender.x)
 
-main_schaeferyeo7 <- left_join(subjlist1, main, by="ID")
-main_schaeferyeo7 <- left_join(main_schaeferyeo7, qa, by="ID")
-main_schaeferwsbm <- left_join(subjlist1, main, by="ID")
-main_schaeferwsbm <- left_join(main_schaeferwsbm, qa, by="ID")
 main_yeodev <- left_join(subjlist1, main, by="ID")
-main_yeodev <- left_join(main_yeodev, qa, by="ID")
 
 # Demographic statistics --------------------------------------------------
 #length
@@ -95,9 +71,7 @@ main_yeodev$demo_comb_parent_edu <- rowMeans(main_yeodev[c('demo_prnt_ed_num_v2_
 View(main_yeodev$demo_comb_parent_edu)
 hist(as.numeric(main_yeodev$demo_comb_parent_edu), xlab = "Combined averaged years of parent education", breaks = 15, label = TRUE, col = "red")
 median(main_yeodev$demo_comb_parent_edu)
-# 
-# save(main_yeodev, file="~/Downloads/Demo_data.Rdata")
-# load("Demo_data.Rdata")
+
 # Replication dataset demographics ----------------------------------------
 data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
 output_data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
@@ -123,28 +97,11 @@ income$ID <- income$subjectkey
 main<- left_join(sites,socio, by=c("ID", "eventname"))
 main <- left_join(main, income, by=c("ID", "eventname"))
 
-##need to get XCP mean FD and # of outliers and control for that
-runs <- read.csv(paste0(subjlist_dir,'n544_filtered_runs_site14site20_postprocess.csv'))
-runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
-runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
-#read in the list of runs that were used and merge it with xcp qa vars
-qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols/XCP_QAVARS_with_nVols.csv"))
-qa_vars <- rename(qa_vars, ID=id0, run=id1)
-qa <- left_join(runs, qa_vars, by=c("ID", "run"))
-
-#make summary variables of volumes and censored volumes
-qa <- qa %>% group_by(ID) %>% mutate(totalnVolCensored=sum(nVolCensored), totalSizet=sum(nVols)) %>% ungroup()
-
-qa <- qa %>% mutate(perc_vols=nVols/totalSizet, relMeanRMSMotion_weight=relMeanRMSMotion*perc_vols, pctSpikesFD_weight=pctSpikesFD*perc_vols) %>% group_by(ID) %>% 
-  mutate(fd_mean_avg=sum(relMeanRMSMotion_weight), pctVolsCensored=(totalnVolCensored/totalSizet), pctSpikesFD_avg=sum(pctSpikesFD_weight)) %>% select(fd_mean_avg, pctVolsCensored, pctSpikesFD_avg, totalSizet)
-#average motion across the two runs, weighted by the length of each run as a percentage of the total, same for percent spikes FD. select only the averaged variables
-qa <- qa[!duplicated(qa$ID), ]
-
 #Only baseline visits from cognition
 main <- filter(main, eventname=="baseline_year_1_arm_1") %>% filter(.,site_id_l=="site14" | site_id_l=="site20") #filter out only the baseline visits
-#for site 16 only
+#for site 14 and 20 only
 subjlist1 <- read.table(paste0(subjlist_dir, "/n544_subjects_only_filtered_runs_site14site20_postprocess.txt"), col.names = c("ID"))
-#Keep only n670 subject list
+#Keep only those on the subject list
 main$ID <- str_remove(main$ID, "_") #subjectid has a _ in it after NDAR in the NDAR data, doesn't match subject list
 main$ID <- paste0("sub-",main$ID)
 #make age numeric
@@ -152,12 +109,7 @@ main$age <- as.numeric(main$interview_age.x)/12
 #make sex a factor
 main$gender <- as.factor(main$gender.x)
 
-main_rep_schaeferyeo7 <- left_join(subjlist1, main, by="ID")
-main_rep_schaeferyeo7 <- left_join(main_rep_schaeferyeo7, qa, by="ID")
-main_rep_schaeferwsbm <- left_join(subjlist1, main, by="ID")
-main_rep_schaeferwsbm <- left_join(main_rep_schaeferwsbm, qa, by="ID")
 main_rep_yeodev <- left_join(subjlist1, main, by="ID")
-main_rep_yeodev <- left_join(main_rep_yeodev, qa, by="ID")
 
 #Race
 sum(main_rep_yeodev$race_ethnicity==1)/544
@@ -252,7 +204,6 @@ NID_wsbm_wsbmrep<- clustComp(as.numeric(c(wsbm_consensus_lh,wsbm_consensus_rh)),
 save(yeo_dev_full, yeo_full, wsbm_full,yeo_dev_rep,NMI_yeodev_yeo7, NMI_wsbm_yeo7, NID_wsbm_yeo7, NID_yeodev_yeo7,NMI_yeodev_yeodevrep, NID_yeodev_yeodevrep,NMI_wsbm_wsbmrep, NID_wsbm_wsbmrep, file="~/Downloads/Partition_comparison_stats.RData")
 
 # Confidence data ---------------------------------------------------------
-
 #silhouettes 
 silhouette_lh_dev <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
 silhouette_rh_dev <-  yeo_dev_partition$rh.s
@@ -333,7 +284,6 @@ kruskal.test(freq~yeo7, data = data)
 pairwise.wilcox.test(data$freq, data$yeo7,
                      p.adjust.method = "bonferroni")
 
-
 #Task betas for FP
 data <- data.frame(yeo7_6_betas, yeo_dev_6_betas, wsbm_6_betas)
 colnames(data) <- c('yeo7', 'yeo_dev', 'wsbm')
@@ -345,7 +295,6 @@ longdata$partition <- factor(longdata$partition,levels = c("wsbm","yeo_dev","yeo
 longdata = longdata %>% 
   dplyr::group_by(partition) %>% 
   mutate(med = median(betas))
-
 
 longdata %>% group_by(partition) %>% summarise_all(mean)
 longdata %>% group_by(partition) %>% summarise_all(sd)
