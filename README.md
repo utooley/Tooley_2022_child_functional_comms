@@ -16,7 +16,9 @@ Code used in this repo depends heavily on that of the Computational Brain Imagin
 
 ![image](cover_fig.png)
 
-Both the developmental clustering partition and the developmental WSBM are provided in `fsaverage6`, `MNI152`, and `fs_LR 32k` space in the `partitions` folder. The WSBM partition is also provided as a vector of assignments for the Schaefer 400-region parcellation, available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal).
+Both the developmental clustering partition and the developmental WSBM are provided in `fsaverage6`, `MNI152`, and `fs_LR 32k` space in the `partitions` folder. The adult clustering partition was estimated by Yeo _et al._ in their [2011 paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3174820/), and is available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Yeo2011_fcMRI_clustering).
+
+The WSBM partition is also provided as a vector of assignments for the Schaefer 400-region parcellation, available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal).
 
 ## Manuscript
 

@@ -13,7 +13,7 @@ Run the following command:
 
 ## MNI152
 
-The clustering partition provided was projected to MNI152 1mm space from fsaverage6 (using the RF-ANTS method published by Wu *et al.* (2018) in *Human Brain Mapping*). The WSBM partition is provided as a relabeling of the Schaefer-400 parcellation in MNI152 1mm space (available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal)).
+The developmental clustering partition provided was projected to MNI152 1mm space from fsaverage6 (using the RF-ANTS method published by Wu *et al.* (2018) in *Human Brain Mapping*). The WSBM partition is provided as a relabeling of the Schaefer-400 parcellation in MNI152 1mm space (available from the CBIG group [here](https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal)).
 
 
 The WSBM is also provided as a vector of assignments for the Schaefer 400-region parcellation, in `wsbm_schaefer400_assignments.txt`.

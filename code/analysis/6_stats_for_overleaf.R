@@ -35,7 +35,7 @@ runs <- read.csv(paste0(subjlist_dir,'parcellation/n670_filtered_runs_site16_pos
 runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
 runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
 #read in the list of runs that were used and merge it with xcp qa vars
-qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/XCP_QAVARS_with_nVols.csv"))
+qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols/XCP_QAVARS_with_nVols.csv"))
 qa_vars <- rename(qa_vars, ID=id0, run=id1)
 qa <- left_join(runs, qa_vars, by=c("ID", "run"))
 
@@ -128,7 +128,7 @@ runs <- read.csv(paste0(subjlist_dir,'n544_filtered_runs_site14site20_postproces
 runs <- select(runs, id, var1:var2) #take only the first 2 runs that were used
 runs<- melt(runs, measure=c("var1", "var2")) %>% arrange(., id) %>% select(., -variable) %>% rename(.,ID=id,run=value)#reshape them and take out extra
 #read in the list of runs that were used and merge it with xcp qa vars
-qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/XCP_QAVARS_with_nVols.csv"))
+qa_vars <- read.csv(paste0(raw_data_dir, "bids_release2_site14site20/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols/XCP_QAVARS_with_nVols.csv"))
 qa_vars <- rename(qa_vars, ID=id0, run=id1)
 qa <- left_join(runs, qa_vars, by=c("ID", "run"))
 
