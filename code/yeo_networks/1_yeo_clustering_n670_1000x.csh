@@ -3,7 +3,7 @@
 #run this on SGE with qsub -l h_vmem=50.0G,s_vmem=49.7G
 
 set output_dir = "/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries"
-set cluster_out = "${output_dir}/yeo7_n670_2runsonly_1000tries" #CHANGE THIS!
+set cluster_out = "${output_dir}/yeo7_n670_2runsonly_1000tries" #change name for new tries
 set orig_data_dir = "${ABCD_DATA}/bids_release2_site16/derivatives/surfaces"
 set sub_list = "/cbica/projects/spatial_topography/data/subjLists/release2/site16/yeo_networks/n670_site16_subjlist_tworunsonly.txt"
 set surf_list = "/cbica/projects/spatial_topography//data/subjLists/release2/site16/yeo_networks/n670_site16_fullpaths_tworunsonly.csv"
