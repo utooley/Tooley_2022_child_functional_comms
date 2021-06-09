@@ -11,6 +11,7 @@ library(ggplot2)
 library(tidyr)
 library(igraph)
 library(aricode)
+library(reshape)
 
 #rearrange the order of the brains in the T9 view of fsbrain
 source("~/Documents/tools/fsbrain_fix_t9.R")
@@ -89,6 +90,92 @@ rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
 vis.region.values.on.subject(subjects_dir, 'fsaverage6', 'Schaefer2018_400Parcels_7Networks_order',  wsbm_consensus_lh, 
                              wsbm_consensus_rh, makecmap_options = makecmap_options, "inflated", views="t4",rgloptions = rgloptions, rglactions = rglactions)
+
+#make schaefer parcellation figure
+rgloptions=list("windowRect"=c(50,50,1000,1000));
+rglactions=list("snapshot_png"=paste0(output_image_directory,"no_flat_pial.png"))
+vis.subject.annot(subjects_dir, 'fsaverage', 'Schaefer2018_400Parcels_7Networks_order', hemi = "lh", surface = "pial",
+                  rgloptions = rgloptions, rglactions = rglactions, outline=list('background'= "gray",'outline_color'='gray', 'expand_inwards' = 0L))
+
+# Search over k: Yeo dev -------------------------------------
+k_dir="/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries/search_over_k/"
+data <- read.csv(paste0(k_dir,"k2_to_9_tries100_rand100.znorm1.dim1.csv")) %>% select(-contains(c("_1", "_9")))
+data2 <-  read.csv(paste0(k_dir,"k9_to_17_tries100_rand100.znorm1.dim1.csv")) %>% select(-contains(paste0("_.",1:8)))
+data <- cbind(data,data2)
+longdata <- melt(data, varnames = c("x","k"))
+longdata$k <-as.numeric(gsub("[^0-9-]", "", longdata$variable))
+longdata$type <- str_extract(longdata$variable, "[a-z]+_[a-z]+" )
+longdata <- arrange(longdata, as.numeric(k))
+longdata$value[longdata$value==0] <- NA
+#plot stability
+dat <- longdata %>% filter(type=="stability_true") %>% filter(k!=1)
+p<-ggplot(dat, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.05)+stat_summary(aes(group=type),
+                                                                                                               fun.y = mean, geom="line") + theme_classic()+scale_x_continuous(breaks=seq(2,17))+ylab(label = "Instability")
+p
+
+# Search over k: WSBM -------------------------------------
+k_dir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/search_over_k/"
+logevidence=matrix(NA,670,18)
+for (i in 1:17){
+  k=i+1
+  try(mine <- read.csv(paste0(k_dir, "wsbm_search_over_k",k,"_n670_site16_30trials.csv")))
+  logevidence[,k] <- with(mine, if("subjlist_.4" %in% colnames(mine)) subjlist_.4 else Var4)
+}
+#remove the outlier subject sub-NDARINVK0U3PRRR
+logevidence <- logevidence[mine$Var1!="sub-NDARINVK0U3PRRR",]
+logevidence[logevidence==0] <- NA
+longdata_training <- melt(logevidence, varnames = c("x","k")) %>% filter(k != 1 & k != 18)
+p<-ggplot(longdata_training, aes(x=k, y=value)) + geom_jitter(position=position_jitter(0.2), cex=1, alpha=0.5)+stat_summary(aes(group=1),
+                                                                                                                            fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()
+p
+
+# Replication dataset add plot
+k_dir="/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/"
+wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/"
+#add different data file for k=7, "n544_test_sample_",k,"consensus_log_evidence_replicate_7try.csv"
+partition_logevidence=matrix(NA,544,18)
+num_comms=numeric()
+for (i in 2:17){
+  k=i
+  print(k)
+  try(mine <- read.csv(paste0(k_dir, "n544_test_sample_",k,"consensus_log_evidence_replicate.csv")))
+  partition_logevidence[,i] <- mine$LP
+  partition <- readMat(paste0(wsbm_datadir,"n670_k",k,"training_sample_consensus_partition.mat"), drop = )
+  print(range(unique(partition$consensus.iter.mode)))
+  num_comms[i] <- max(unique(partition$consensus.iter.mode))
+}
+partition_logevidence[partition_logevidence==0] <- NA
+#colnames(partition_logevidence)=lapply(1:2, function(x) paste0("k",x)) #give them column names
+longdata_testing <- melt(partition_logevidence, varnames = c("x","k")) %>% filter(k != 1 & k != 18) %>% arrange(k)
+
+p<-ggplot(data=longdata_training, aes(x=k, y=value))+geom_point(position=position_jitter(0.2), cex=1,alpha=0.05,col="black") + 
+  stat_summary(data=longdata_training, aes(group=1),fun.y = mean, geom="line", col="black") + 
+  theme_classic() +
+  #scale_y_continuous(limits=c(-32000, 100000))+
+  labs(x="k (number of communities)", y="Log-likelihood (main sample)")
+p
+ggplot_build(p)$layout$panel_scales_y[[1]]$range$range
+
+#put it on top of the training sample with 2 y-axes!
+longdata_testing$value_trans <- longdata_testing$value*(4.5)+(290000)
+l <- p+geom_point(data=longdata_testing, aes(x=k, y=value_trans),position=position_jitter(0.2), cex=1, alpha=0.05, col="#5e195e") +
+  scale_y_continuous(limits=c(ggplot_build(p)$layout$panel_scales_y[[1]]$range$range),
+                     sec.axis = sec_axis(~ . -(290000/4.5), name = "Log-likelihood (replication sample)"))+
+  stat_summary(data=longdata_testing, aes(y=value_trans,group=1), fun.y = mean, geom="line", col="#5e195e") +
+  scale_x_continuous(breaks=seq(2,17))
+l
+
+b<-ggplot(data=longdata_testing, aes(x=k, y=value))+geom_point(position=position_jitter(0.2), cex=1,alpha=0.1) + 
+  stat_summary(data=longdata_testing, aes(group=1),fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + 
+  theme_classic() 
+b
+ggplot_build(b)$layout$panel_scales_y[[1]]$range$range
+
+#plot the number of communities detected at each k
+num_comms <- na.omit(num_comms)
+longdata <- data.frame(c(2:17),num_comms) %>% filter(num_comms != 1);colnames(longdata) <- c("k","num_comms")
+p<-ggplot(data=longdata, aes(x=k, y=num_comms))+geom_point(alpha=0.5)+stat_summary(aes(group=1), fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()+scale_x_continuous(breaks=seq(2,17))
+p
 
 ####################################
 ######## YEO DEV ###################
@@ -234,20 +321,23 @@ write.fs.curv(paste0(subjects_dir, "fsaverage5/label/rh.silhouette.fsaverage5.cu
 #Then reload them below
 silhouette_lh_fs6 <- read.fs.curv(paste0(subjects_dir, "fsaverage6/label/lh.silhouette.fsaverage6.curv"))
 silhouette_rh_fs6 <- read.fs.curv(paste0(subjects_dir, "fsaverage6/label/rh.silhouette.fsaverage6.curv"))
-
-#clip them for under 0 is 0, above 0.6 to be equal to max
-lower_bound <- ecdf(silhouette_rh_fs6)(0)#find the value
-clipped_silhouette_rh <- clip.data(silhouette_rh_fs6, lower_bound,ecdf(silhouette_rh_fs6)(0.6))
-lower_bound <- ecdf(silhouette_lh_fs6)(0)#find the value
-clipped_silhouette_lh <- clip.data(silhouette_lh_fs6, lower_bound,ecdf(silhouette_lh_fs6)(0.6))
+clipped_silhouette_lh <- silhouette_lh_fs6
+clipped_silhouette_rh <- silhouette_rh_fs6
 clipped_silhouette_lh[clipped_silhouette_lh==1] <- NA
 clipped_silhouette_rh[clipped_silhouette_rh==1] <- NA
+
+#No longer needed, now use the 'range' argument to cmap_options below
+#clip them for under 0 is 0, above 0.6 to be equal to max
+# lower_bound <- ecdf(silhouette_rh_fs6)(0)#find the value
+# clipped_silhouette_rh <- clip.data(silhouette_rh_fs6, lower_bound,ecdf(silhouette_rh_fs6)(0.6))
+# lower_bound <- ecdf(silhouette_lh_fs6)(0)#find the value
+# clipped_silhouette_lh <- clip.data(silhouette_lh_fs6, lower_bound,ecdf(silhouette_lh_fs6)(0.6))
 
 #Visualize them on fsaverage6
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
 rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette_fsaverage6.png"))
 colFn_diverging = colorRampPalette(c("burlywood4","burlywood3","white"));
-makecmap_options=list('colFn'=colFn_diverging)
+makecmap_options=list('range'=c(0,0.5),'colFn'=colFn_diverging)
 vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated",  views="t4", rgloptions = rgloptions, rglactions = rglactions,
                     makecmap_options = makecmap_options,draw_colorbar = TRUE)
 
@@ -256,20 +346,21 @@ output_image_directory="/cbica/projects/spatial_topography/output/images/brains/
 
 silhouette_lh <-  yeo_dev_partition$lh.s #this is in fsaverage6 space, so 40k vertices
 silhouette_rh <-  yeo_dev_partition$rh.s
+clipped_silhouette_lh <- silhouette_lh;clipped_silhouette_rh <- silhouette_rh
+clipped_silhouette_lh[clipped_silhouette_lh==1] <- NA;clipped_silhouette_rh[clipped_silhouette_rh==1] <- NA
 
+#No longer needed, now use the 'range' argument to cmap_options below
 #clip values below 0 to be equal to 0, above 0.6 to be equal to max
-lower_bound <- ecdf(silhouette_rh)(0)#find the value
-clipped_silhouette_rh <- clip.data(silhouette_rh, lower_bound,ecdf(silhouette_rh)(0.6))
-lower_bound <- ecdf(silhouette_lh)(0)#find the value
-clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,ecdf(silhouette_lh)(0.6))
-clipped_silhouette_lh[clipped_silhouette_lh==1] <- NA
-clipped_silhouette_rh[clipped_silhouette_rh==1] <- NA
+# lower_bound <- ecdf(silhouette_rh)(0)#find the value
+# clipped_silhouette_rh <- clip.data(silhouette_rh, lower_bound,ecdf(silhouette_rh)(0.8))
+# lower_bound <- ecdf(silhouette_lh)(0)#find the value
+# clipped_silhouette_lh <- clip.data(silhouette_lh, lower_bound,ecdf(silhouette_lh)(0.8))
 
 #Visuzalize them
 rgloptions=list("windowRect"=c(50,50,1000,1000));
 rglactions=list("snapshot_png"=paste0(output_image_directory,"silhouette.png"))
 colFn_diverging = colorRampPalette(c("burlywood4","burlywood3","white"));
-makecmap_options=list('colFn'=colFn_diverging)
+makecmap_options=list('range'=c(0,0.5),'colFn'=colFn_diverging)
 vis.data.on.subject(subjects_dir, 'fsaverage6',clipped_silhouette_lh, clipped_silhouette_rh, "inflated", makecmap_options = makecmap_options,  views="t4", rgloptions = rgloptions, rglactions = rglactions, draw_colorbar = T)
 
 # Supplemental fig 2--negative values of confidence -----------------------
