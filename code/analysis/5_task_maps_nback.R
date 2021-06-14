@@ -4,7 +4,7 @@ options(rgl.useNULL=TRUE) #if fsbrain not working!
 
 options(scipen = 9)
 
-library(fsbrain) #this may not work if you're editing the script directly on the cluster...
+library(fsbrain) 
 library(freesurferformats)
 library(dplyr)
 library(R.matlab)
@@ -60,7 +60,7 @@ rgloptions=list("windowRect"=c(50,50,1000,1000));
 
 # Read in task data -------------------------------------------------------
 #Read in the task data
-#FIRST NEED TO CONVERT TO FSAVERAGE OUTSIDE OF R WITH THE SCRIPT transform_task_maps_to_fsaverage.sh, then read in
+#FIRST NEED TO CONVERT TO FSAVERAGE OUTSIDE OF R WITH THE SCRIPTtransform_fsLR_task_maps_to_fsaverage.sh, then read in
 lh_nback <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.nBack_2_back_vs_0_back_performance_2back_.lh.41k_fsavg_L.func.gii"), element_index = 1L)
 rh_nback <- read.fs.morph.gii(paste0(task_maps_dir,"ABCD.nBack_2_back_vs_0_back_performance_2back_.rh.41k_fsavg_R.func.gii"), element_index = 1L)
 nback_2_vs_0_perf <- c(lh_nback,rh_nback)

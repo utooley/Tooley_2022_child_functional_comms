@@ -129,7 +129,7 @@ p<-ggplot(longdata_training, aes(x=k, y=value)) + geom_jitter(position=position_
                                                                                                                             fun.y = mean, geom="line", col=rgb(101, 58, 150, maxColorValue = 255)) + theme_classic()
 p
 
-# Replication dataset add plot
+# Replication dataset, add plot overlaid
 k_dir="/cbica/projects/spatial_topography/data/imageData/wsbm/site14site20_test_sample/brains/"
 wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/brains/"
 #add different data file for k=7, "n544_test_sample_",k,"consensus_log_evidence_replicate_7try.csv"
@@ -145,13 +145,11 @@ for (i in 2:17){
   num_comms[i] <- max(unique(partition$consensus.iter.mode))
 }
 partition_logevidence[partition_logevidence==0] <- NA
-#colnames(partition_logevidence)=lapply(1:2, function(x) paste0("k",x)) #give them column names
 longdata_testing <- melt(partition_logevidence, varnames = c("x","k")) %>% filter(k != 1 & k != 18) %>% arrange(k)
 
 p<-ggplot(data=longdata_training, aes(x=k, y=value))+geom_point(position=position_jitter(0.2), cex=1,alpha=0.05,col="black") + 
   stat_summary(data=longdata_training, aes(group=1),fun.y = mean, geom="line", col="black") + 
   theme_classic() +
-  #scale_y_continuous(limits=c(-32000, 100000))+
   labs(x="k (number of communities)", y="Log-likelihood (main sample)")
 p
 ggplot_build(p)$layout$panel_scales_y[[1]]$range$range
