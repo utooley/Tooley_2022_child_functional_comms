@@ -4,11 +4,12 @@ library(R.matlab)
 library(igraph)
 library(aricode)
 library(data.table)
+library(stringr)
 
 #Load in ABCD demographic data
-data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
-output_data_dir='~/Documents/projects/in_progress/spatial_topography_CUBIC/data/subjData/Release2_fixed/'
-subjlist_dir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/'
+data_dir='~/Box/ABCD/data/subjData/Release2_fixed/'
+output_data_dir='~/Box/ABCD/data/subjData/Release2_fixed/'
+subjlist_dir='~/Documents/projects/in_progress/Tooley_2021_child_functional_comms/data/subjLists/release2/site16/'
 net_data_dir='/cbica/projects/spatial_topography/data/imageData/net_stats/'
 raw_data_dir='/data/jux/mackey_group/public_data/ABCD/'
 sites <- read.delim(paste0(data_dir,"abcd_lt01.txt"), stringsAsFactors = F)# change strings as factors = FALSE next time
