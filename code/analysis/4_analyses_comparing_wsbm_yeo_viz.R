@@ -24,6 +24,7 @@ wsbm_datadir="/cbica/projects/spatial_topography/data/imageData/wsbm/site16_trai
 subjects_dir = "/Users/utooley/Documents/tools/CBIG/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal/Parcellations/FreeSurfer5.3/";
 yeo_dev_dir="/cbica/projects/spatial_topography/data/imageData/yeo_clustering_networks/yeo7_n670_2runsonly_1000tries_mot_outliers/"
 yeo7_ref_dir="/cbica/projects/spatial_topography/tools/CBIG/stable_projects/brain_parcellation/Yeo2011_fcMRI_clustering/1000subjects_reference/"
+#yeo7_ref_dir="/Users/utooley/Documents/tools/parcellations/Yeo_from_freesurfer/"
 
 # Read in files -----------------------------------------------------------
 #Vector of WSBM community assignments
@@ -62,7 +63,7 @@ rgloptions=list("windowRect"=c(50,50,1000,1000));
 output_image_directory="/cbica/projects/spatial_topography/output/images/brains/yeo7/"
 
 rglactions=list("snapshot_png"=paste0(output_image_directory,"communities.png"))
-vis.subject.annot(subjects_dir, 'fsaverage','Yeo2011_7Networks_N1000','both', "inflated", views="t4",
+vis.subject.annot(yeo7_ref_dir, 'fsaverage','Yeo2011_7Networks_N1000','both', "inflated", views="t4",
                   rgloptions = rgloptions,rglactions = rglactions)
 
 # Plot the Yeo developmental partition on brain ---------------------------
@@ -1024,8 +1025,8 @@ g <- ggplot(data = data, aes(y = snr, x = yeo7, fill = yeo7)) +
   scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
   # coord_flip() +
   theme_bw() +
-  raincloud_theme #+
-  #coord_cartesian(ylim=c(7.593983,96.34887))
+  raincloud_theme +
+  coord_cartesian(ylim=c(5,95))
 g
 
 # Violin plot of dev SNR by dev community: Supp Fig S3b ---------------------------------
@@ -1058,8 +1059,8 @@ g <- ggplot(data = data, aes(y = snr, x = yeodev, fill = yeodev)) +
   scale_fill_manual(values= c("#7B287E", "#5CA1C8", "#0A9045","#C33AF8", "#B6C988", "#EF9C23", "#E34A53")) +
   # coord_flip() +
   theme_bw() +
-  raincloud_theme #+
-#coord_cartesian(ylim=c(7.593983,96.34887))
+  raincloud_theme +
+  coord_cartesian(ylim=c(5,95))
 g
 
 #Stats
@@ -1126,6 +1127,10 @@ main_yeodev$demo_comb_parent_edu <- rowMeans(main_yeodev[c('demo_prnt_ed_num_v2_
 View(main_yeodev$demo_comb_parent_edu)
 hist(as.numeric(main_yeodev$demo_comb_parent_edu), xlab = "Combined averaged years of parent education", breaks = 15, label = TRUE, col = "red")
 median(main_yeodev$demo_comb_parent_edu)
+
+#Is motion associated with age?
+cor.test(main_yeodev$age, main_yeodev$fd_mean_avg)
+cor.test(main_yeodev$age, main_yeodev$pctVolsCensored)
 
 save(main_yeodev, file="~/Downloads/Demo_data.Rdata")
 load("Demo_data.Rdata")
