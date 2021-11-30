@@ -1,5 +1,5 @@
 %PATHS
-datadir=fullfile('/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols')
+datadir=fullfile('/cbica/projects/spatial_topography/public_data/ABCD/bids_release2_site16/derivatives/xcpEngine_gsrwmcsf_scrub0.2mm_dropvols_marek/')
 listdir='/cbica/projects/spatial_topography/data/subjLists/release2/site16/parcellation'
 z_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zNetworks'
 noz_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400Networks'
@@ -113,10 +113,11 @@ yeo_nodes=dlmread('/data/picsl/mackey_group/tools/schaefer400/schaefer400x7Commu
 
 %read in each subject's wsbm partition
 for n=1:height(subjlist)
+    n
     sub=char(subjlist.id(n));
     %load the wsbm for a given subject
-    %file=fullfile(wsbm_dir,strcat(sub,'_wsbm.mat'));
-    file=fullfile(wsbm_dir,strcat('thresh_',density,'/',sub,'_wsbm_thresh.mat'))
+    file=fullfile(wsbm_dir,strcat(sub,'_wsbm.mat'));
+    %file=fullfile(wsbm_dir,strcat('thresh_',density,'/',sub,'_wsbm_thresh.mat'))
     try 
         load(file);
         sub_log_evidence(n,1)=Model.Para.LogEvidence;
@@ -140,22 +141,44 @@ noyeo_opt_part_matrix=multislice_pair_labeling(part_matrix) %this is not actuall
 %% Create consensus partition
 %use consensus iterative procedure (no relabeling is necessary, can skip above 2 lines)
 gamma=2 %when keeping the thresholding of the consensus matrix, this is the right gamma
-[consensus_mat_iter_noyeo Q2 X_new3 qpc cooccurence_matrix]=consensus_iterative(noyeo_opt_part_matrix', gamma);
+[consensus_mat_iter_noyeo Q2 X_new3 qpc cooccurence_matrix]=consensus_iterative(part_matrix', gamma);
 [consensus_iter_mode freq ties]=mode(consensus_mat_iter_noyeo) %extract assignment variance across optimizations
 
 %save these outfiles
-outfile=('/cbica/projects/spatial_topography//data/imageData/wsbm/site16_training_sample/brains/consensus_iter_freq_entr.mat')
+outfile=('/cbica/projects/spatial_topography//data/imageData/wsbm/site16_training_sample/brains/freq.mat')
 save(outfile, 'freq')
+
+%% Look at versatility of the co-occurence matrix
+% load part_matrix
+wsbm_dir='/cbica/projects/spatial_topography/data/imageData/wsbm/site16_training_sample/'
+z_avg_outdir='/cbica/projects/spatial_topography/data/imageData/fc_matrices/site16_training_sample/Schaefer400zavgNetworks'
+
+gamma=2 %when keeping the thresholding of the consensus matrix, this is the right gamma
+[consensus_mat_iter_noyeo Q2 X_new3 qpc cooccurence_matrix]=consensus_iterative(part_matrix', gamma);
+[consensus_iter_mode freq ties]=mode(consensus_mat_iter_noyeo) %extract assignment variance across optimizations
+
+% for x=1:400
+%     cooccurence_matrix(x,x)= NaN;
+% end
+cooccurence_matrix_prop = cooccurence_matrix/670;
+%This is the association matrix, so now we can look at versatility.
+
+%adapted from versatility code at https://github.com/mwshinn/versatility/tree/master/matlab
+Cs = sin(pi*cooccurence_matrix_prop);
+V = sum(Cs, 1,'omitnan')./sum(cooccurence_matrix_prop, 1,'omitnan'); % CM/Cs are symmetric so axis doesn't matter
+V(V<1e-10) = 0; % Stupid floats
+
+outfile=('/cbica/projects/spatial_topography//data/imageData/wsbm/site16_training_sample/brains/versatility_n670.mat')
+save(outfile, 'V')
 
 %% Relabel and save the consensus partitions so they are visually comparable to Yeo7
 outdir='/cbica/projects/spatial_topography//data/imageData/wsbm/site16_training_sample/brains/'
 %relabel the consensus partitions so that they are visually comparable to Yeo
-consensus_iter_mode_yeorelabeled=multislice_pair_labeling([yeo_nodes consensus_iter_mode']);
-consensus_iter_mode_yeorelabeled=consensus_iter_mode_yeorelabeled(:,2);
+consensus_iter_mode_wsbmrelabeled=multislice_pair_labeling([consensus_iter_mode_yeorelabeled consensus_iter_mode']);
+consensus_iter_mode_wsbmrelabeled=consensus_iter_mode_wsbmrelabeled(:,2);
 
 outfile=(fullfile(outdir, 'n670_training_sample_consensus_partitions_yeorelabeled.mat'))
 save(outfile, 'consensus_iter_mode_yeorelabeled')
-
 
 %% SAVE OUTFILES
 outfile=(fullfile(outdir, 'n670_training_sample_consensus_mat_and_nodal_variance.mat'))
