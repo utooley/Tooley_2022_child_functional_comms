@@ -10,7 +10,7 @@ We provide two freely available partitions (assignments of regions to communitie
 
 ## Requirements
 
-Preprocessing was conducted using fMRIprep v. 1.4.1 ([link](https://fmriprep.org/en/stable/)) and xcpEngine version 1.0 ([link](https://xcpengine.readthedocs.io/)) on a high-performance computing cluster running CentOS 6.9. See [manuscript](https://www.sciencedirect.com/science/article/pii/S1053811921011149#sec0003) Methods for all software version specifications.
+Preprocessing was conducted using fMRIprep v. 1.4.1 ([link](https://fmriprep.org/en/stable/)) and xcpEngine version 1.0 ([link](https://xcpengine.readthedocs.io/)) on a high-performance computing cluster running CentOS 6.9. See [Methods](https://www.sciencedirect.com/science/article/pii/S1053811921011149#sec0003) for all software version specifications.
 
 Code used in this repo depends heavily on that of the Computational Brain Imaging Group (v0.17.0, found [here](https://github.com/ThomasYeoLab/CBIG)). This must be installed to run functions in the `code/yeo_networks` folder.
 
