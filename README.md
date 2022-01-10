@@ -1,14 +1,16 @@
 
 # Tooley et al., 2021
 
-This repo contains code accompanying the manuscript [Functional brain network community structure in childhood: Unfinished territories and fuzzy boundaries](https://www.biorxiv.org/content/10.1101/2021.01.21.427677v1), as well as data imported directly into the manuscript.
+This is the repo for code and data imported directly into the manuscript:
 
-We provide two freely available partitions (assignments of regions to communities, also sometimes called networks), that were estimated using data from children ages 9-11. For more details, see the [preprint](https://www.biorxiv.org/content/10.1101/2021.01.21.427677v1)!
+Tooley, U. A., Mackey, A. P., & Bassett, D. S. (2021). Functional brain network community structure in childhood: Unfinished territories and fuzzy boundaries. NeuroImage, 118843. [https://doi.org/10.1016/j.neuroimage.2021.118843](https://doi.org/10.1016/j.neuroimage.2021.118843)
+
+We provide two freely available partitions (assignments of regions to communities, also sometimes called networks), that were estimated using data from children ages 9-11. For more details, see the [manuscript](https://doi.org/10.1016/j.neuroimage.2021.118843)!
 
 
 ## Requirements
 
-Preprocessing was conducted using fMRIprep v. 1.4.1 ([link](https://fmriprep.org/en/stable/)) and xcpEngine version 1.0 ([link](https://xcpengine.readthedocs.io/)) on a high-performance computing cluster running CentOS 6.9. See [preprint](https://www.biorxiv.org/content/10.1101/2021.01.21.427677v1) methods for all software version specifications.
+Preprocessing was conducted using fMRIprep v. 1.4.1 ([link](https://fmriprep.org/en/stable/)) and xcpEngine version 1.0 ([link](https://xcpengine.readthedocs.io/)) on a high-performance computing cluster running CentOS 6.9. See [manuscript](https://www.sciencedirect.com/science/article/pii/S1053811921011149#sec0003) Methods for all software version specifications.
 
 Code used in this repo depends heavily on that of the Computational Brain Imaging Group (v0.17.0, found [here](https://github.com/ThomasYeoLab/CBIG)). This must be installed to run functions in the `code/yeo_networks` folder.
 
