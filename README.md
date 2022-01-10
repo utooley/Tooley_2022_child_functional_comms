@@ -1,9 +1,9 @@
 
-# Tooley et al., 2021
+# Tooley et al., 2022
 
 This is the repo for code and data imported directly into the manuscript:
 
-Tooley, U. A., Mackey, A. P., & Bassett, D. S. (2021). Functional brain network community structure in childhood: Unfinished territories and fuzzy boundaries. _NeuroImage_, 118843. [https://doi.org/10.1016/j.neuroimage.2021.118843](https://doi.org/10.1016/j.neuroimage.2021.118843)
+Tooley, U. A., Mackey, A. P., & Bassett, D. S. (2022). Functional brain network community structure in childhood: Unfinished territories and fuzzy boundaries. _NeuroImage_, 118843. [https://doi.org/10.1016/j.neuroimage.2021.118843](https://doi.org/10.1016/j.neuroimage.2021.118843)
 
 We provide two freely available partitions (assignments of regions to communities, also sometimes called networks), that were estimated using data from children ages 9-11. For more details, see the [manuscript](https://doi.org/10.1016/j.neuroimage.2021.118843)!
 
